@@ -11,7 +11,15 @@ import {
 } from "@/components/apple";
 import { EmailSignup } from "@/components/marketing/EmailSignup";
 import { FaqAccordion } from "@/components/marketing/FaqAccordion";
-import { featureTiles, footnotes, halfTiles, hero, promos } from "@/content/home";
+import Image from "next/image";
+import {
+  featureTiles,
+  footnotes,
+  halfTiles,
+  hero,
+  heroMedia,
+  promos,
+} from "@/content/home";
 
 /** Muted label for capabilities that are not built yet. */
 function ComingSoon() {
@@ -48,7 +56,20 @@ export default function HomePage() {
           { href: hero.secondary.href, label: hero.secondary.label },
         ]}
         media={
-          <MediaPlaceholder className="mx-auto h-[420px] max-w-content rounded-t-large" />
+          <div className="mx-auto max-w-content overflow-hidden rounded-t-large">
+            <Image
+              src={heroMedia.src}
+              alt={heroMedia.alt}
+              width={heroMedia.width}
+              height={heroMedia.height}
+              placeholder="blur"
+              blurDataURL={heroMedia.blurDataURL}
+              priority
+              sizes="(max-width: 734px) 100vw, 980px"
+              quality={82}
+              className="h-auto w-full"
+            />
+          </div>
         }
       />
 

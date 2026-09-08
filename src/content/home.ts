@@ -19,6 +19,29 @@ export interface Tile {
  * one sentence. No exclamation marks, no superlatives.
  */
 
+export interface Media {
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+  blurDataURL: string;
+}
+
+/**
+ * Val Thorens and the Trois Vallees, rendered from MapTiler winter tiles with
+ * 3D terrain. Real terrain Alpline actually covers, not stock photography.
+ *
+ * Captured in a headless browser rather than via MapTiler's Static Maps API,
+ * which returns 403 on this account's free tier.
+ */
+export const heroMedia: Media = {
+  src: "/media/home/hero-winter.webp",
+  alt: "Three-dimensional winter map of Val Thorens, showing the piste network coloured by difficulty across the Trois Vallees.",
+  width: 1960,
+  height: 1440,
+  blurDataURL: "data:image/webp;base64,UklGRjoAAABXRUJQVlA4IC4AAACQAQCdASoQAAwAAwBSJZV/2RgAiwAA/vD3nlfBthpe6CKYT+TXK0ZAHyXpngAA",
+};
+
 export const hero = {
   eyebrow: "Alpline",
   headline: "Know the mountain.",
