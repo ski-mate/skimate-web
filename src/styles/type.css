@@ -1,0 +1,120 @@
+/*
+ * Alpline web type ramp.
+ *
+ * The iOS ramp in apple-ui-brain/00-foundations/typography.md tops out at 34pt,
+ * far too small for marketing display sizes. This is a web display scale layered
+ * on top of it, fluid between the 734px and 1440px breakpoints.
+ *
+ * Plain classes rather than @layer components: Next compiles each imported CSS
+ * file as its own module, so @layer has no @tailwind directive in scope here.
+ * Class specificity still beats preflight's element selectors, and
+ * @tailwind utilities comes later in globals.css so utilities win.
+ *
+ * Tracking was tuned for SF Pro; Inter sets slightly tighter at the same values,
+ * so every step exposes its own custom property for one-place re-tuning.
+ */
+
+:root {
+  --font-stack: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+    var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  --tracking-display-1: -0.015em;
+  --tracking-display-2: -0.012em;
+  --tracking-display-3: -0.01em;
+  --tracking-headline: -0.008em;
+  --tracking-title: -0.005em;
+  --tracking-tagline: 0.011em;
+  --tracking-body: -0.022em;
+  --tracking-callout: -0.018em;
+  --tracking-nav: -0.01em;
+}
+
+.type-display-1 {
+  font-size: clamp(2.5rem, 1.06rem + 6.14vw, 5rem);
+  line-height: 1.05;
+  font-weight: 600;
+  letter-spacing: var(--tracking-display-1);
+}
+
+.type-display-2 {
+  font-size: clamp(2rem, 1.14rem + 3.69vw, 3.5rem);
+  line-height: 1.07;
+  font-weight: 600;
+  letter-spacing: var(--tracking-display-2);
+}
+
+.type-display-3 {
+  font-size: clamp(1.75rem, 1.32rem + 1.84vw, 2.5rem);
+  line-height: 1.1;
+  font-weight: 600;
+  letter-spacing: var(--tracking-display-3);
+}
+
+.type-headline {
+  font-size: clamp(1.5rem, 1.21rem + 1.23vw, 2rem);
+  line-height: 1.125;
+  font-weight: 600;
+  letter-spacing: var(--tracking-headline);
+}
+
+.type-title {
+  font-size: clamp(1.3125rem, 1.24rem + 0.31vw, 1.5rem);
+  line-height: 1.1667;
+  font-weight: 600;
+  letter-spacing: var(--tracking-title);
+}
+
+.type-tagline {
+  font-size: clamp(1.0625rem, 0.92rem + 0.61vw, 1.3125rem);
+  line-height: 1.2381;
+  font-weight: 400;
+  letter-spacing: var(--tracking-tagline);
+}
+
+.type-eyebrow {
+  font-size: clamp(1.0625rem, 0.92rem + 0.61vw, 1.3125rem);
+  line-height: 1.1905;
+  font-weight: 600;
+  letter-spacing: var(--tracking-tagline);
+}
+
+.type-body {
+  font-size: 1.0625rem;
+  line-height: 1.4706;
+  font-weight: 400;
+  letter-spacing: var(--tracking-body);
+}
+
+.type-callout {
+  font-size: 1rem;
+  line-height: 1.3125;
+  font-weight: 400;
+  letter-spacing: var(--tracking-callout);
+}
+
+.type-nav {
+  font-size: 0.75rem;
+  line-height: 1.3333;
+  font-weight: 400;
+  letter-spacing: var(--tracking-nav);
+}
+
+.type-footnote {
+  font-size: 0.75rem;
+  line-height: 1.3333;
+  font-weight: 400;
+  letter-spacing: var(--tracking-nav);
+}
+
+.type-caption {
+  font-size: 0.6875rem;
+  line-height: 1.3636;
+  font-weight: 400;
+}
+
+@media (max-width: 734px) {
+  .type-nav {
+    font-size: 0.875rem;
+    line-height: 1.2857;
+  }
+}
