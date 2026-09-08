@@ -56,7 +56,9 @@ export default function HomePage() {
         <HeroTile
           key={tile.id}
           size="tile"
-          scheme={i % 2 === 0 ? "auto" : "dark"}
+          // Pinned, not "auto": on apple.com the tile rhythm is fixed, so a
+          // light tile stays light even when the visitor's OS is dark.
+          scheme={i % 2 === 0 ? "light" : "dark"}
           tone={i % 2 === 0 ? "elevated" : "base"}
           eyebrow={tile.eyebrow}
           headline={tile.headline}
@@ -73,7 +75,7 @@ export default function HomePage() {
         {halfTiles.map((tile, i) => (
           <HalfTile
             key={tile.id}
-            scheme={i % 2 === 0 ? "auto" : "dark"}
+            scheme={i % 2 === 0 ? "light" : "dark"}
             tone={i % 2 === 0 ? "elevated" : "base"}
             eyebrow={tile.eyebrow}
             headline={tile.headline}
