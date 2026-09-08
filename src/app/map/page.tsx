@@ -11,7 +11,6 @@ import React, { useState } from 'react';
 import { Map } from '@/components/map-feature/Map';
 import { Sidebar } from '@/components/map-feature/Sidebar';
 import { RESORTS } from '@/components/map-feature/config';
-import { Header } from '@/components/sections/header';
 
 export default function MapPage() {
     const [resortId, setResortId] = useState<keyof typeof RESORTS>('zermatt');
@@ -24,12 +23,7 @@ export default function MapPage() {
 
     return (
         <main className="relative h-screen w-full flex flex-col overflow-hidden">
-            {/* Minimal Header for Map */}
-            <div className="z-20 bg-white/80 backdrop-blur border-b">
-                <Header />
-            </div>
-
-            <div className="relative flex-1">
+                        <div className="relative flex-1">
                 <Map center={resort.center} zoom={resort.zoom} />
 
                 <Sidebar

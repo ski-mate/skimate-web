@@ -1,5 +1,3 @@
-import { Header } from "@/components/sections/header";
-import { Footer } from "@/components/sections/footer";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -9,7 +7,6 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
   return (
     <main className="relative">
-      <Header />
       <div className="container py-24 md:py-32">
         <article className="prose prose-lg dark:prose-invert mx-auto max-w-4xl">
           <h1>Alpline Privacy Policy</h1>
@@ -616,7 +613,6 @@ export default function PrivacyPage() {
           <p><strong>Effective Date:</strong> February 19, 2026 | <strong>Version:</strong> 1.0</p>
         </article>
       </div>
-      <Footer />
     </main>
   );
 }

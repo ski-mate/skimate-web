@@ -4,13 +4,11 @@ import {
   Container,
   Footnotes,
   GalleryStrip,
-  GlobalNav,
   HalfTile,
   HeroTile,
   PromoCard,
   Reveal,
   SectionScheme,
-  SiteFooter,
   TileGrid,
 } from "@/components/apple";
 
@@ -50,8 +48,6 @@ const PISTE = ["green", "blue", "red", "black", "orange"] as const;
 export default function StylePage() {
   return (
     <>
-      <GlobalNav />
-      <main>
       <Container as="section" className="py-12">
         <h1 className="type-display-3">Style reference</h1>
         <p className="type-body mt-2 text-[var(--label-2)]">
@@ -199,8 +195,6 @@ export default function StylePage() {
           "Feature availability varies by resort.",
         ]}
       />
-      </main>
-      <SiteFooter />
     </>
   );
 }

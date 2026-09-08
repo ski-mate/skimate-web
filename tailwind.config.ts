@@ -104,7 +104,9 @@ const config = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  // @tailwindcss/typography is still required by /privacy and /terms, which
+  // use `prose`. They are restyled onto the guide reading column in P3.
+  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
 } satisfies Config;
 
 export default config;

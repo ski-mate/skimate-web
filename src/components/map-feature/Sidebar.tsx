@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { RESORTS } from './config';
-import { Mountain, ChevronDown } from 'lucide-react';
+import { AlplineMark as Mountain, ChevronDown } from '@/components/icons';
 
 interface SidebarProps {
     resortId: string;

@@ -1,19 +1,19 @@
-import { siteConfig } from "@/lib/config";
 import { type ClassValue, clsx } from "clsx";
-import { Metadata } from "next";
+import type { Metadata } from "next";
 import { twMerge } from "tailwind-merge";
+import { site } from "@/content/site";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 export function absoluteUrl(path: string) {
-  return `${process.env.NEXT_PUBLIC_APP_URL || siteConfig.url}${path}`;
+  return `${process.env.NEXT_PUBLIC_APP_URL || site.url}${path}`;
 }
 
 export function constructMetadata({
-  title = siteConfig.name,
-  description = siteConfig.description,
+  title = site.name,
+  description = site.description,
   image = absoluteUrl("/og"),
   ...props
 }: {
@@ -24,82 +24,28 @@ export function constructMetadata({
 }): Metadata {
   return {
     title: {
-      template: "%s | " + siteConfig.name,
-      default: siteConfig.name + " - " + siteConfig.description,
+      template: `%s | ${site.name}`,
+      default: `${site.name} — ${site.tagline}`,
     },
-    description: description || siteConfig.description,
-    keywords: siteConfig.keywords,
+    description,
+    keywords: [...site.keywords],
     openGraph: {
       title,
       description,
-      url: siteConfig.url,
-      siteName: siteConfig.name,
-      images: [
-        {
-          url: image,
-          width: 1200,
-          height: 630,
-          alt: title,
-        },
-      ],
-      type: "website",
+      url: site.url,
+      siteName: site.name,
+      images: [{ url: image, width: 1200, height: 630, alt: site.name }],
       locale: "en_US",
+      type: "website",
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
       images: [image],
-      creator: "@alpline",
     },
-    icons: {
-      icon: "/favicon.ico",
-      apple: "/appicon.png",
-    },
-    metadataBase: new URL(siteConfig.url),
-    authors: [
-      {
-        name: siteConfig.name,
-        url: siteConfig.url,
-      },
-    ],
-    applicationName: siteConfig.name,
-    appleWebApp: {
-      capable: true,
-      title: siteConfig.name,
-      statusBarStyle: "default",
-    },
+    icons: { icon: "/favicon.ico", apple: "/appicon.png" },
+    metadataBase: new URL(site.url),
     ...props,
   };
-}
-
-export function formatDate(date: string) {
-  let currentDate = new Date().getTime();
-  if (!date.includes("T")) {
-    date = `${date}T00:00:00`;
-  }
-  let targetDate = new Date(date).getTime();
-  let timeDifference = Math.abs(currentDate - targetDate);
-  let daysAgo = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
-
-  let fullDate = new Date(date).toLocaleString("en-us", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
-
-  if (daysAgo < 1) {
-    return "Today";
-  } else if (daysAgo < 7) {
-    return `${fullDate} (${daysAgo}d ago)`;
-  } else if (daysAgo < 30) {
-    const weeksAgo = Math.floor(daysAgo / 7);
-    return `${fullDate} (${weeksAgo}w ago)`;
-  } else if (daysAgo < 365) {
-    const monthsAgo = Math.floor(daysAgo / 30);
-    return `${fullDate} (${monthsAgo}mo ago)`;
-  } else {
-    const yearsAgo = Math.floor(daysAgo / 365);
-    return `${fullDate} (${yearsAgo}y ago)`;
-  }
 }

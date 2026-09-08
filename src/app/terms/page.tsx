@@ -1,5 +1,3 @@
-import { Header } from "@/components/sections/header";
-import { Footer } from "@/components/sections/footer";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -9,7 +7,6 @@ export const metadata: Metadata = {
 export default function TermsPage() {
   return (
     <main className="relative">
-      <Header />
       <div className="container py-24 md:py-32">
         <article className="prose prose-lg dark:prose-invert mx-auto max-w-4xl">
           <h1>Alpline Terms of Service</h1>
@@ -409,7 +406,6 @@ export default function TermsPage() {
           <p>Thank you for using Alpline. Ski safe!</p>
         </article>
       </div>
-      <Footer />
     </main>
   );
 }

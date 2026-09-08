@@ -1,5 +1,5 @@
 import { AlplineMark } from "@/components/icons";
-import { siteConfig } from "@/lib/config";
+import { site } from "@/content/site";
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
 
@@ -7,7 +7,7 @@ export const runtime = "edge";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
-  const postTitle = searchParams.get("title") || siteConfig.description;
+  const postTitle = searchParams.get("title") || site.tagline;
   const font = fetch(
     new URL("../../assets/fonts/Inter-SemiBold.ttf", import.meta.url)
   ).then((res) => res.arrayBuffer());
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
           justifyContent: "center",
           backgroundColor: "#fff",
           // set background image if needed
-          backgroundImage: `url(${siteConfig.url}/og.png)`,
+          backgroundImage: `url(${site.url}/og.png)`,
           fontSize: 32,
           fontWeight: 600,
         }}
@@ -72,23 +72,10 @@ export async function GET(req: NextRequest) {
               color: "#808080",
             }}
           >
-            {siteConfig.name}
+            {site.name}
           </div>
         </div>
 
-        <img
-          src={`${siteConfig.url}/iphone.png`}
-          width={900}
-          style={{
-            position: "relative",
-            bottom: -160,
-            aspectRatio: "auto",
-            border: "4px solid lightgray",
-            background: "lightgray",
-            borderRadius: 20,
-            zIndex: 1,
-          }}
-        />
       </div>
     ),
     {
