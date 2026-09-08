@@ -14,17 +14,21 @@ export function DeviceFrame({
   src,
   alt,
   width = 300,
+  aspect = 1206 / 2622,
   priority = false,
+  blurDataURL,
   className,
 }: {
   src: string;
   alt: string;
   width?: number;
+  /** Screen aspect ratio. Defaults to iPhone 17 Pro, which is what we capture. */
+  aspect?: number;
   priority?: boolean;
+  blurDataURL?: string;
   className?: string;
 }) {
-  // iPhone 16 Pro aspect: 1179 x 2556 logical points.
-  const height = Math.round((width * 2556) / 1179);
+  const height = Math.round(width / aspect);
   const bezel = Math.max(6, Math.round(width * 0.028));
   const outerRadius = Math.round(width * 0.155);
 
@@ -46,6 +50,8 @@ export function DeviceFrame({
             alt={alt}
             fill
             priority={priority}
+            placeholder={blurDataURL ? "blur" : undefined}
+            blurDataURL={blurDataURL}
             sizes={`${width}px`}
             className="object-cover"
           />

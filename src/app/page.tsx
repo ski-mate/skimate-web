@@ -1,6 +1,7 @@
 import {
   ChevronLink,
   Container,
+  DeviceFrame,
   Footnotes,
   HalfTile,
   HeroTile,
@@ -86,7 +87,17 @@ export default function HomePage() {
           tagline={tile.tagline}
           actions={[{ href: tile.href, label: "Learn more" }]}
           media={
-            <MediaPlaceholder className="mx-auto h-[360px] max-w-content rounded-t-large" />
+            tile.media ? (
+              <DeviceFrame
+                src={tile.media.src}
+                alt={tile.media.alt}
+                blurDataURL={tile.media.blurDataURL}
+                width={300}
+                className="-mb-24"
+              />
+            ) : (
+              <MediaPlaceholder className="mx-auto h-[360px] max-w-content rounded-t-large" />
+            )
           }
           className="mt-3"
         />
@@ -107,7 +118,19 @@ export default function HomePage() {
               </>
             }
             actions={[{ href: tile.href, label: "Learn more" }]}
-            media={<MediaPlaceholder className="h-[200px]" />}
+            media={
+              tile.media ? (
+                <DeviceFrame
+                  src={tile.media.src}
+                  alt={tile.media.alt}
+                  blurDataURL={tile.media.blurDataURL}
+                  width={260}
+                  className="-mb-20"
+                />
+              ) : (
+                <MediaPlaceholder className="h-[200px]" />
+              )
+            }
           />
         ))}
       </TileGrid>

@@ -1,7 +1,24 @@
 import type { FeatureStatus } from "./site";
 
+export interface Media {
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+  blurDataURL: string;
+}
+
+/**
+ * Val Thorens and the Trois Vallees, rendered from MapTiler winter tiles with
+ * 3D terrain. Real terrain Alpline actually covers, not stock photography.
+ *
+ * Captured in a headless browser rather than via MapTiler's Static Maps API,
+ * which returns 403 on this account's free tier.
+ */
 export interface Tile {
   id: string;
+  /** Device screenshot shown inside a DeviceFrame, when one exists. */
+  media?: Media;
   eyebrow: string;
   headline: string;
   tagline: string;
@@ -19,21 +36,6 @@ export interface Tile {
  * one sentence. No exclamation marks, no superlatives.
  */
 
-export interface Media {
-  src: string;
-  alt: string;
-  width: number;
-  height: number;
-  blurDataURL: string;
-}
-
-/**
- * Val Thorens and the Trois Vallees, rendered from MapTiler winter tiles with
- * 3D terrain. Real terrain Alpline actually covers, not stock photography.
- *
- * Captured in a headless browser rather than via MapTiler's Static Maps API,
- * which returns 403 on this account's free tier.
- */
 export const heroMedia: Media = {
   src: "/media/home/hero-winter.webp",
   alt: "Three-dimensional winter map of Val Thorens, showing the piste network coloured by difficulty across the Trois Vallees.",
@@ -61,6 +63,13 @@ export const featureTiles: Tile[] = [
       "Alpline routes you along pistes and lifts, and recalculates when you drift.",
     href: "/features/navigation",
     status: "shipping",
+    media: {
+    src: "/media/app/place-card.webp",
+    alt: "Alpline showing a trail place card for Col de la Chambre, with a Directions button and the run's difficulty, length and vertical drop.",
+    width: 804,
+    height: 1748,
+    blurDataURL: "data:image/webp;base64,UklGRkAAAABXRUJQVlA4IDQAAADwAQCdASoGAAwAAwBSJZQC7AD0Rv/2FAAA/vPQlhlTRP7cEw3K1Kf0cmOqYRQ7ZdrMPYAA",
+  },
   },
   {
     id: "routing",
@@ -90,6 +99,13 @@ export const halfTiles: Tile[] = [
     tagline: "Runs, lifts and mountain restaurants, in winter, satellite or 3D.",
     href: "/resorts",
     status: "shipping",
+    media: {
+    src: "/media/app/map-idle.webp",
+    alt: "Alpline's winter map of Val Thorens, with pistes coloured by difficulty and mountain restaurants and lifts marked.",
+    width: 804,
+    height: 1748,
+    blurDataURL: "data:image/webp;base64,UklGRjwAAABXRUJQVlA4IDAAAADQAQCdASoGAAwAAwBSJYwCsADz22GIAAD+8I1p9KOHK0IKNtfsTQNQEinv4ecAAAA=",
+  },
   },
   {
     id: "places",
