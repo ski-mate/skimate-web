@@ -1,4 +1,4 @@
-import { Icons } from "@/components/icons";
+import { AlplineMark } from "@/components/icons";
 import { siteConfig } from "@/lib/config";
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
@@ -40,10 +40,11 @@ export async function GET(req: NextRequest) {
             top: "125px",
           }}
         >
-          <Icons.logo
+          <AlplineMark
             style={{
               width: "64px",
               height: "64px",
+              color: "#1D1D1F",
             }}
           />
 
