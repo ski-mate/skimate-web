@@ -10,7 +10,9 @@ import {
   SectionScheme,
   TileGrid,
 } from "@/components/apple";
+import type { Metadata } from "next";
 import { EmailSignup } from "@/components/marketing/EmailSignup";
+import { JsonLd } from "@/components/marketing/JsonLd";
 import { FaqAccordion } from "@/components/marketing/FaqAccordion";
 import Image from "next/image";
 import {
@@ -21,6 +23,8 @@ import {
   heroMedia,
   promos,
 } from "@/content/home";
+import { homeGraph } from "@/content/structured-data";
+import { pageMetadata } from "@/lib/seo";
 
 /** Muted label for capabilities that are not built yet. */
 function ComingSoon() {
@@ -44,9 +48,17 @@ function MediaPlaceholder({ className = "" }: { className?: string }) {
   );
 }
 
+export const metadata: Metadata = pageMetadata({
+  title: "Ski navigation with turn-by-turn guidance",
+  description:
+    "Alpline routes you along pistes and lifts, matches runs to your ability and shows your friends on the map. Free on iPhone, no ads.",
+  path: "/",
+});
+
 export default function HomePage() {
   return (
     <>
+      <JsonLd graph={homeGraph()} />
       <HeroTile
         scheme="dark"
         eyebrow={hero.eyebrow}

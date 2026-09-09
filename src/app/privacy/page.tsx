@@ -1,15 +1,17 @@
 import { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
+import { LegalDoc } from "@/components/marketing/LegalDoc";
 
-export const metadata: Metadata = {
-  title: "Privacy Policy | Alpline",
-};
+export const metadata: Metadata = pageMetadata({
+  title: "Privacy Policy",
+  description:
+    "How Alpline collects, uses and protects your data, including location sharing, your privacy choices and your rights under GDPR and CCPA.",
+  path: "/privacy",
+});
 
 export default function PrivacyPage() {
   return (
-    <main className="relative">
-      <div className="container py-24 md:py-32">
-        <article className="prose prose-lg dark:prose-invert mx-auto max-w-4xl">
-          <h1>Alpline Privacy Policy</h1>
+    <LegalDoc title="Alpline Privacy Policy">
           <p><strong>Last Updated: February 19, 2026</strong></p>
 
           <h2>Introduction</h2>
@@ -611,8 +613,6 @@ export default function PrivacyPage() {
           <p><strong>By using Alpline, you acknowledge that you have read, understood, and agree to this Privacy Policy.</strong></p>
           <p>For the most current version of this policy, please check within the app or visit our website.</p>
           <p><strong>Effective Date:</strong> February 19, 2026 | <strong>Version:</strong> 1.0</p>
-        </article>
-      </div>
-    </main>
+    </LegalDoc>
   );
 }

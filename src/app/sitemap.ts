@@ -1,15 +1,25 @@
-import { MetadataRoute } from "next";
-import { headers } from "next/headers";
+import type { MetadataRoute } from "next";
+import { SITE_URL } from "@/lib/seo";
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const headersList = headers();
-  let domain = headersList.get("host") as string;
-  let protocol = "https";
+/**
+ * Static list rather than sniffing the request host, which made this route
+ * dynamic and emitted preview-domain URLs into the sitemap.
+ *
+ * /style is deliberately excluded — it is an internal, noindex surface.
+ */
+const routes: { path: string; priority: number; changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"] }[] = [
+  { path: "", priority: 1, changeFrequency: "weekly" },
+  { path: "/privacy", priority: 0.3, changeFrequency: "yearly" },
+  { path: "/terms", priority: 0.3, changeFrequency: "yearly" },
+  { path: "/map", priority: 0.6, changeFrequency: "monthly" },
+];
 
-  return [
-    {
-      url: `${protocol}://${domain}`,
-      lastModified: new Date(),
-    },
-  ];
+export default function sitemap(): MetadataRoute.Sitemap {
+  const lastModified = new Date();
+  return routes.map((r) => ({
+    url: `${SITE_URL}${r.path}`,
+    lastModified,
+    changeFrequency: r.changeFrequency,
+    priority: r.priority,
+  }));
 }

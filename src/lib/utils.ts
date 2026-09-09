@@ -14,7 +14,7 @@ export function absoluteUrl(path: string) {
 export function constructMetadata({
   title = site.name,
   description = site.description,
-  image = absoluteUrl("/og"),
+  image = absoluteUrl("/opengraph-image"),
   ...props
 }: {
   title?: string;

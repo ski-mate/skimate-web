@@ -22,7 +22,7 @@ export default function MapPage() {
     };
 
     return (
-        <main className="relative h-screen w-full flex flex-col overflow-hidden">
+        <div className="relative h-screen w-full flex flex-col overflow-hidden">
                         <div className="relative flex-1">
                 <Map center={resort.center} zoom={resort.zoom} />
 
@@ -31,6 +31,6 @@ export default function MapPage() {
                     onResortChange={handleResortChange}
                 />
             </div>
-        </main>
+        </div>
     );
 }
