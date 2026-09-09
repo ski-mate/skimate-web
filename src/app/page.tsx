@@ -22,6 +22,7 @@ import {
   hero,
   heroMedia,
   promos,
+  type Media,
 } from "@/content/home";
 import { homeGraph } from "@/content/structured-data";
 import { pageMetadata } from "@/lib/seo";
@@ -36,15 +37,27 @@ function ComingSoon() {
 }
 
 /**
- * Placeholder media. Replaced with device-framed simulator screenshots and
- * MapTiler renders in the imagery phase.
+ * An atmospheric photograph, cropped to a band at the foot of a tile.
+ *
+ * `object-cover` at a fixed height rather than a fixed aspect ratio: these are
+ * environment shots, so the crop can move without losing the subject, and a
+ * consistent band height is what gives the tile stack its rhythm.
  */
-function MediaPlaceholder({ className = "" }: { className?: string }) {
+function TilePhoto({ photo, height }: { photo: Media; height: string }) {
   return (
-    <div
-      aria-hidden="true"
-      className={`w-full bg-[var(--fill)] ${className}`}
-    />
+    <div className={`relative w-full overflow-hidden ${height}`}>
+      <Image
+        src={photo.src}
+        alt={photo.alt}
+        fill
+        placeholder="blur"
+        blurDataURL={photo.blurDataURL}
+        sizes="(max-width: 1068px) 100vw, 720px"
+        quality={82}
+        style={{ objectPosition: photo.position ?? "center" }}
+        className="object-cover"
+      />
+    </div>
   );
 }
 
@@ -69,20 +82,18 @@ export default function HomePage() {
           { href: hero.secondary.href, label: hero.secondary.label },
         ]}
         media={
-          <div className="mx-auto max-w-content overflow-hidden rounded-t-large">
-            <Image
-              src={heroMedia.src}
-              alt={heroMedia.alt}
-              width={heroMedia.width}
-              height={heroMedia.height}
-              placeholder="blur"
-              blurDataURL={heroMedia.blurDataURL}
-              priority
-              sizes="(max-width: 734px) 100vw, 980px"
-              quality={82}
-              className="h-auto w-full"
-            />
-          </div>
+          <Image
+            src={heroMedia.src}
+            alt={heroMedia.alt}
+            width={heroMedia.width}
+            height={heroMedia.height}
+            placeholder="blur"
+            blurDataURL={heroMedia.blurDataURL}
+            priority
+            sizes="100vw"
+            quality={78}
+            className="h-auto w-full"
+          />
         }
       />
 
@@ -107,9 +118,9 @@ export default function HomePage() {
                 width={300}
                 className="-mb-24"
               />
-            ) : (
-              <MediaPlaceholder className="mx-auto h-[360px] max-w-content rounded-t-large" />
-            )
+            ) : tile.photo ? (
+              <TilePhoto photo={tile.photo} height="h-[280px] md:h-[420px]" />
+            ) : undefined
           }
           className="mt-3"
         />
@@ -139,9 +150,9 @@ export default function HomePage() {
                   width={260}
                   className="-mb-20"
                 />
-              ) : (
-                <MediaPlaceholder className="h-[200px]" />
-              )
+              ) : tile.photo ? (
+                <TilePhoto photo={tile.photo} height="h-[220px]" />
+              ) : undefined
             }
           />
         ))}

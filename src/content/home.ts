@@ -1,24 +1,26 @@
 import type { FeatureStatus } from "./site";
+import type { Media } from "./media";
 
-export interface Media {
-  src: string;
-  alt: string;
-  width: number;
-  height: number;
-  blurDataURL: string;
-}
+export type { Media };
+
 
 /**
- * Val Thorens and the Trois Vallees, rendered from MapTiler winter tiles with
- * 3D terrain. Real terrain Alpline actually covers, not stock photography.
+ * A tile carries at most one of two kinds of image, and the distinction is
+ * deliberate:
  *
- * Captured in a headless browser rather than via MapTiler's Static Maps API,
- * which returns 403 on this account's free tier.
+ *   media  a real screenshot of the shipped app, shown inside a DeviceFrame
+ *   photo  an atmospheric mountain photograph, generated, shown as a band
+ *
+ * Product claims are only ever illustrated with `media`. A generated image is
+ * never allowed to stand in for an interface, because an invented screenshot
+ * is a false claim about what the app does.
  */
 export interface Tile {
   id: string;
   /** Device screenshot shown inside a DeviceFrame, when one exists. */
   media?: Media;
+  /** Atmospheric photograph, shown full-bleed at the foot of the tile. */
+  photo?: Media;
   eyebrow: string;
   headline: string;
   tagline: string;
@@ -37,11 +39,12 @@ export interface Tile {
  */
 
 export const heroMedia: Media = {
-  src: "/media/home/hero-winter.webp",
-  alt: "Three-dimensional winter map of Val Thorens, showing the piste network coloured by difficulty across the Trois Vallees.",
-  width: 1960,
-  height: 1440,
-  blurDataURL: "data:image/webp;base64,UklGRjoAAABXRUJQVlA4IC4AAACQAQCdASoQAAwAAwBSJZV/2RgAiwAA/vD3nlfBthpe6CKYT+TXK0ZAHyXpngAA",
+  src: "/media/home/hero-dawn.webp",
+  alt: "Dawn over a deep-winter alpine range, with layered snow ridges above a valley filled with cloud.",
+  width: 2000,
+  height: 837,
+  blurDataURL:
+    "data:image/webp;base64,UklGRkQAAABXRUJQVlA4IDgAAADQAQCdASoQAAYAA4BaJbACdAEOeXlf0AD+J55jdX6ub6wbIMgGBh99utu5j8peud4kveK0fLeSAA==",
 };
 
 export const hero = {
@@ -79,6 +82,14 @@ export const featureTiles: Tile[] = [
       "Set your ability once and Alpline will never route you onto a run above it.",
     href: "/features/navigation",
     status: "shipping",
+    photo: {
+      src: "/media/home/routing.webp",
+      alt: "A groomed piste seen from directly above, dividing into two separate runs around a stand of snow-covered pines.",
+      width: 1800,
+      height: 1012,
+      blurDataURL:
+        "data:image/webp;base64,UklGRlAAAABXRUJQVlA4IEQAAACQAQCdASoQAAkAA4BaJQBOgA/mSgAA/gsmJcOBm4/NRf7PgEtoDHZP8ej4IFUQ0yDyJVbtFnl9GwGgvkAE+K8kCtWAAA==",
+    },
   },
 ];
 
@@ -91,6 +102,16 @@ export const halfTiles: Tile[] = [
     tagline: "See where everyone is, and regroup without the group chat.",
     href: "/features/social",
     status: "shipping",
+    photo: {
+      src: "/media/home/social.webp",
+      alt: "Four skiers, small in the frame, descending a wide open snowfield below a rock buttress.",
+      width: 1600,
+      height: 900,
+      // The skiers sit low in the frame; a centred crop cuts them in half.
+      position: "center 45%",
+      blurDataURL:
+        "data:image/webp;base64,UklGRi4AAABXRUJQVlA4ICIAAAAwAQCdASoQAAkAA4BaJaQAA3AA/u+OoSooZ/WFQvVbkUAA",
+    },
   },
   {
     id: "resorts",
@@ -114,6 +135,14 @@ export const halfTiles: Tile[] = [
     tagline: "Drop a pin on the good coffee, the quiet lift, the meeting point.",
     href: "/features/navigation",
     status: "shipping",
+    photo: {
+      src: "/media/home/places.webp",
+      alt: "A timber mountain restaurant banked in deep snow at dusk, its windows lit, with peaks behind.",
+      width: 1600,
+      height: 900,
+      blurDataURL:
+        "data:image/webp;base64,UklGRlAAAABXRUJQVlA4IEQAAAAwAgCdASoQAAkAA4BaJZgCdAEWzO7V5fJgAAD+gst7OFtmxp8dXNkEnfJIC6xFcfo74ieT5Xj4qbKlX109oqXxEYAAAA==",
+    },
   },
   {
     id: "tracking",
@@ -122,6 +151,14 @@ export const halfTiles: Tile[] = [
     tagline: "Vertical, distance and speed, recorded as you ski.",
     href: "/features/tracking",
     status: "soon",
+    photo: {
+      src: "/media/home/tracking.webp",
+      alt: "A single carved ski track arcing across a wide field of fresh corduroy grooming in low winter sun.",
+      width: 1600,
+      height: 900,
+      blurDataURL:
+        "data:image/webp;base64,UklGRlAAAABXRUJQVlA4IEQAAADwAQCdASoQAAkAA4BaJZgCdADcrWdiLoAA/pFrr4AJASLoIu0C3j/LJFCHSkVGsJ+Ad6GbsmUv8uWOmMkRtXov28PAAA==",
+    },
   },
 ];
 

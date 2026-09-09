@@ -1,4 +1,5 @@
 import type { FeatureStatus } from "./site";
+import type { Media } from "./media";
 import type { SectionId } from "./guide/types";
 
 export interface Capability {
@@ -19,6 +20,12 @@ export interface FeatureArea {
   intro: string;
   srs: string;
   capabilities: Capability[];
+  /**
+   * The hero photograph. Atmospheric only — a feature page never illustrates a
+   * capability with a generated image, because an invented screenshot would be
+   * a claim about behaviour that does not exist.
+   */
+  photo: Media;
   /** Guide section to link into, when it has published articles. */
   guideSection?: SectionId;
 }
@@ -42,6 +49,14 @@ export const featureAreas: FeatureArea[] = [
     intro:
       "Road maps are the wrong shape for a mountain. Alpline routes along the piste and lift network, so a route is a sequence of runs and rides rather than a line drawn over terrain you cannot use.",
     srs: "4.1",
+    photo: {
+      src: "/media/features/navigation.webp",
+      alt: "A groomed piste curving away down a mountain flank between orange marker poles, with peaks beyond.",
+      width: 2000,
+      height: 837,
+      blurDataURL:
+        "data:image/webp;base64,UklGRk4AAABXRUJQVlA4IEIAAADQAQCdASoQAAYAA4BaJZACdAC53DbLAAD8tLbE4irceSWhBPG4XRCa+Ykoa7ZEewyCtPMhbpK70EKUI1CZvlgAAAA=",
+    },
     guideSection: "navigation",
     capabilities: [
       {
@@ -86,6 +101,14 @@ export const featureAreas: FeatureArea[] = [
     intro:
       "Alpline records your day on the device rather than in the cloud, so your logbook is yours whether or not you ever make an account. An account adds backup, not permission.",
     srs: "4.2",
+    photo: {
+      src: "/media/features/tracking.webp",
+      alt: "A long groomed run in low winter sun with a single set of ski tracks running its length.",
+      width: 2000,
+      height: 837,
+      blurDataURL:
+        "data:image/webp;base64,UklGRj4AAABXRUJQVlA4IDIAAACQAQCdASoQAAYAA4BaJQBOgCGIX4AA/ie1aGpJXRHAbue4MwlzN0gtknDVBqW7l23AAA==",
+    },
     capabilities: [
       {
         title: "Recording",
@@ -124,6 +147,14 @@ export const featureAreas: FeatureArea[] = [
     intro:
       "Safety features are the one part of Alpline with no conditions attached. They are free forever, they work without an account, and they are never part of a paid tier.",
     srs: "4.3",
+    photo: {
+      src: "/media/features/safety.webp",
+      alt: "A line of piste marker poles disappearing into a whiteout on an exposed alpine ridge.",
+      width: 2000,
+      height: 837,
+      blurDataURL:
+        "data:image/webp;base64,UklGRjQAAABXRUJQVlA4ICgAAABwAQCdASoQAAYAA4BaJZwCdAFAAAD+7/llLEcNGfPuo76ylJMirsAA",
+    },
     capabilities: [
       {
         title: "Emergency SOS",
@@ -161,6 +192,14 @@ export const featureAreas: FeatureArea[] = [
     intro:
       "Groups split up. Someone stops for coffee, someone takes one more run, and the rest of the day turns into a thread of messages about where everybody is. Alpline puts your group on the map instead.",
     srs: "4.4",
+    photo: {
+      src: "/media/features/social.webp",
+      alt: "A small group of skiers gathered on a snowy col, tiny against the surrounding mountains.",
+      width: 2000,
+      height: 837,
+      blurDataURL:
+        "data:image/webp;base64,UklGRkIAAABXRUJQVlA4IDYAAAAQAgCdASoQAAYAA4BaJYwCdAECpmRxVx0AAP4FzdAsiQY6gx9vJVvRHEd9R0CY5OD5aILoAAA=",
+    },
     capabilities: [
       {
         title: "Live friend locations",
@@ -198,6 +237,14 @@ export const featureAreas: FeatureArea[] = [
     intro:
       "A resort is more than its pistes. Alpline maps the places on the mountain too, so finding lunch is the same gesture as finding a run.",
     srs: "4.5",
+    photo: {
+      src: "/media/features/resorts.webp",
+      alt: "A large alpine ski basin from above, pistes threading between rocky ridges and pine forest.",
+      width: 2000,
+      height: 837,
+      blurDataURL:
+        "data:image/webp;base64,UklGRkoAAABXRUJQVlA4ID4AAAAQAgCdASoQAAYAA4BaJYwCdAEU3OH8xwMwAP14/D8cB2QIsV0NQ8fe1nSXYI5ukYbNicK5wy2tTDX4hycAAA==",
+    },
     guideSection: "navigation",
     capabilities: [
       {
@@ -232,6 +279,14 @@ export const featureAreas: FeatureArea[] = [
     intro:
       "Conditions decide the day more than anything else. Alpline surfaces what matters on the mountain itself, rather than the forecast for the town in the valley.",
     srs: "4.6",
+    photo: {
+      src: "/media/features/conditions.webp",
+      alt: "Fresh snowfall loading the branches of a dense alpine pine forest in flat overcast light.",
+      width: 2000,
+      height: 837,
+      blurDataURL:
+        "data:image/webp;base64,UklGRkAAAABXRUJQVlA4IDQAAACwAQCdASoQAAYAA4BaJaQAAodlK7Z0APa0G0sE8lrFQ/2yO4KCjWybjOKfPhFHb7UkAAAA",
+    },
     capabilities: [
       {
         title: "Mountain weather",
@@ -260,6 +315,14 @@ export const featureAreas: FeatureArea[] = [
     intro:
       "Your skiing does not only live in one app, and it should not be trapped in one either. Everything Alpline records is exportable, in formats other tools already understand.",
     srs: "4.7",
+    photo: {
+      src: "/media/features/integrations.webp",
+      alt: "A snowy mountain shoulder at dusk, with the lights of a valley village far below.",
+      width: 2000,
+      height: 837,
+      blurDataURL:
+        "data:image/webp;base64,UklGRjgAAABXRUJQVlA4ICwAAADwAQCdASoQAAYAA4BaJYwCdAEQ/bH3pAAA/vQqeeqcvCe1379rj2OYjwAAAA==",
+    },
     capabilities: [
       {
         title: "Health platforms",
@@ -292,6 +355,14 @@ export const featureAreas: FeatureArea[] = [
     intro:
       "Once a day is recorded there is more to do with it than count the vertical. These are the parts of Alpline that turn a track into something you can look at.",
     srs: "4.8",
+    photo: {
+      src: "/media/features/advanced.webp",
+      alt: "A steep untracked powder couloir between dark rock walls high in the mountains.",
+      width: 2000,
+      height: 837,
+      blurDataURL:
+        "data:image/webp;base64,UklGRjwAAABXRUJQVlA4IDAAAADwAQCdASoQAAYAA4BaJQBOgCPQf1xIIAAA/vXc5M06pz3zik4S5Cym500BkWQAAAA=",
+    },
     capabilities: [
       {
         title: "3D replay",

@@ -7,6 +7,7 @@ import {
   HeroTile,
   SectionScheme,
 } from "@/components/apple";
+import Image from "next/image";
 import { Breadcrumbs } from "@/components/guide/Breadcrumbs";
 import { StatusBadge } from "@/components/marketing/StatusBadge";
 import { featureAreas, getFeatureArea } from "@/content/features";
@@ -59,7 +60,20 @@ export default function FeatureAreaPage({
         eyebrow={area.eyebrow}
         headline={area.headline}
         tagline={area.tagline}
-        mediaFit="contain"
+        media={
+          <Image
+            src={area.photo.src}
+            alt={area.photo.alt}
+            width={area.photo.width}
+            height={area.photo.height}
+            placeholder="blur"
+            blurDataURL={area.photo.blurDataURL}
+            priority
+            sizes="100vw"
+            quality={78}
+            className="h-auto w-full"
+          />
+        }
       />
 
       <SectionScheme scheme="auto" className="py-section">
