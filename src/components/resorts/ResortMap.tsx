@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import * as maptilersdk from "@maptiler/sdk";
 import "@maptiler/sdk/dist/maptiler-sdk.css";
+import { applyAtlasCartography } from "@/lib/map/cartography";
 import type { Resort } from "@/content/resorts/types";
 
 const KEY =
@@ -37,10 +38,36 @@ export function ResortMap({ resorts }: { resorts: Resort[] }) {
       zoom,
       navigationControl: false,
       geolocateControl: false,
+      // This map is a backdrop, not a tool — /map is where you explore. Making
+      // it non-interactive also takes the canvas out of the tab order, so the
+      // decorative wrapper can carry aria-hidden without hiding anything
+      // focusable.
+      interactive: false,
+      // The MapTiler SDK renders its attribution control regardless of this
+      // flag, and on these heroes it lands under a dark scrim inside an
+      // aria-hidden wrapper: unreadable, and a focusable link where none
+      // should be. It is hidden in CSS and re-rendered by <MapCredit>, which
+      // shows the same credit as real page content.
+      attributionControl: false,
     });
     map.current = m;
 
     m.on("load", () => {
+      // Same Apple cartography as /map. Without it these heroes fall back to
+      // MapTiler's cyan winter palette and its full POI clutter, and read as a
+      // different product from the Atlas two clicks away.
+      //
+      // Always the light palette: the hero's own scrim supplies the darkness,
+      // and the dark cartography under it comes out nearly black.
+      applyAtlasCartography(m, "light");
+
+      m.getCanvas().setAttribute(
+        "aria-label",
+        single
+          ? `Map showing the location of ${resorts[0].name}`
+          : "World map showing every ski resort in Alpline's catalogue"
+      );
+
       m.addSource("resorts", {
         type: "geojson",
         data: {
@@ -87,5 +114,5 @@ export function ResortMap({ resorts }: { resorts: Resort[] }) {
     );
   }
 
-  return <div ref={container} className="h-full w-full" aria-hidden="true" />;
+  return <div ref={container} className="resort-map h-full w-full" />;
 }

@@ -19,11 +19,18 @@
 
   --label: #1d1d1f;
   --label-2: rgba(29, 29, 31, 0.72);
-  --label-3: rgba(29, 29, 31, 0.56);
+  /* 0.64, not 0.56: at 11px the lighter value is 3.94:1 on white, under AA. */
+  --label-3: rgba(29, 29, 31, 0.64);
   --label-4: rgba(29, 29, 31, 0.36);
 
   --link: #0066cc;
   --link-hover: #0077ed;
+
+  /* Filled controls. Kept at Apple's button blue in every scheme: white on
+     #2997ff is 3.01:1, below AA, so the dark palette must not reuse --link
+     here. White on #0071e3 is 4.62:1. */
+  --link-fill: #0071e3;
+  --link-fill-hover: #0077ed;
 
   --separator: rgba(0, 0, 0, 0.12);
   --separator-strong: rgba(0, 0, 0, 0.22);
@@ -53,6 +60,9 @@
 
   --link: #2997ff;
   --link-hover: #52a8ff;
+
+  --link-fill: #0071e3;
+  --link-fill-hover: #0077ed;
 
   --separator: rgba(255, 255, 255, 0.16);
   --separator-strong: rgba(255, 255, 255, 0.28);

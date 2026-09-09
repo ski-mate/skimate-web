@@ -26,7 +26,7 @@ export function AtlasStrip({
         <h2 className="type-caption font-semibold uppercase tracking-[0.06em] text-[var(--label-3)]">
           Current view
         </h2>
-        <span className="type-caption tabular-nums text-label-4">
+        <span className="type-caption tabular-nums text-label-3">
           {resorts.length} {resorts.length === 1 ? "resort" : "resorts"}
         </span>
       </div>
@@ -67,7 +67,7 @@ export function AtlasStrip({
               </li>
             ))}
             {overflow > 0 ? (
-              <li className="type-caption self-center px-1 text-label-4">
+              <li className="type-caption self-center px-1 text-label-3">
                 + {overflow} more — narrow the filters to see them
               </li>
             ) : null}

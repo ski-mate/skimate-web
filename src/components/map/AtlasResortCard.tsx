@@ -69,7 +69,7 @@ export function AtlasResortCard({
           </Link>
         </div>
       ) : (
-        <p className="type-caption border-t border-[var(--separator)] px-4 py-2.5 text-label-4">
+        <p className="type-caption border-t border-[var(--separator)] px-4 py-2.5 text-label-3">
           Piste and lift data lands here as we ingest each resort.
         </p>
       )}
@@ -88,7 +88,7 @@ function Stat({
 }) {
   return (
     <div className={`px-3 py-2.5 ${border ? "border-l border-[var(--separator)]" : ""}`}>
-      <dt className="type-caption text-label-4">{label}</dt>
+      <dt className="type-caption text-label-3">{label}</dt>
       <dd className="type-footnote mt-0.5 tabular-nums text-label">{value}</dd>
     </div>
   );

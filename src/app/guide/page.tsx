@@ -48,7 +48,7 @@ export default function GuideHome() {
               {planned.map((a) => (
                 <li
                   key={a.slug}
-                  className="type-callout flex items-center gap-2 text-[var(--label-4)]"
+                  className="type-callout flex items-center gap-2 text-[var(--label-3)]"
                 >
                   {a.title}
                   <span className="type-caption rounded-pill border border-[var(--separator)] px-2 py-0.5">

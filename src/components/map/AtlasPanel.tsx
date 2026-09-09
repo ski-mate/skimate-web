@@ -36,7 +36,7 @@ export function AtlasPanelTitle({
         {children}
       </h2>
       {count ? (
-        <span className="type-caption tabular-nums text-[var(--label-4)]">{count}</span>
+        <span className="type-caption tabular-nums text-[var(--label-3)]">{count}</span>
       ) : null}
     </div>
   );
@@ -77,7 +77,7 @@ export function AtlasFacetRow({
       >
         {label}
       </span>
-      <span className="type-caption tabular-nums text-[var(--label-4)]">{count}</span>
+      <span className="type-caption tabular-nums text-[var(--label-3)]">{count}</span>
     </button>
   );
 }

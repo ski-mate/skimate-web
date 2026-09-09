@@ -37,6 +37,18 @@ function ComingSoon() {
 }
 
 /**
+ * "Learn more" appears six times down the page. The visible text stays short;
+ * the destination is named for assistive technology and for crawlers.
+ */
+function LearnMore({ about }: { about: string }) {
+  return (
+    <>
+      Learn more<span className="sr-only"> about {about.toLowerCase()}</span>
+    </>
+  );
+}
+
+/**
  * An atmospheric photograph, cropped to a band at the foot of a tile.
  *
  * `object-cover` at a fixed height rather than a fixed aspect ratio: these are
@@ -108,7 +120,7 @@ export default function HomePage() {
           eyebrow={tile.eyebrow}
           headline={tile.headline}
           tagline={tile.tagline}
-          actions={[{ href: tile.href, label: "Learn more" }]}
+          actions={[{ href: tile.href, label: <LearnMore about={tile.eyebrow} /> }]}
           media={
             tile.media ? (
               <DeviceFrame
@@ -140,7 +152,7 @@ export default function HomePage() {
                 {tile.status === "soon" ? <ComingSoon /> : null}
               </>
             }
-            actions={[{ href: tile.href, label: "Learn more" }]}
+            actions={[{ href: tile.href, label: <LearnMore about={tile.eyebrow} /> }]}
             media={
               tile.media ? (
                 <DeviceFrame

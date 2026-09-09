@@ -81,12 +81,12 @@ export function EmailSignup() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className="type-body min-w-0 flex-1 rounded-pill border border-[var(--separator)] bg-[var(--bg)] px-5 py-3 text-[var(--label)] placeholder:text-[var(--label-4)]"
+              className="type-body min-w-0 flex-1 rounded-pill border border-[var(--separator)] bg-[var(--bg)] px-5 py-3 text-[var(--label)] placeholder:text-[var(--label-3)]"
             />
             <button
               type="submit"
               disabled={status === "loading"}
-              className="type-body rounded-pill bg-[var(--link)] px-6 py-3 font-medium text-white transition-colors hover:bg-[var(--link-hover)] disabled:opacity-60"
+              className="type-body rounded-pill bg-[var(--link-fill)] px-6 py-3 font-medium text-white transition-colors hover:bg-[var(--link-fill-hover)] disabled:opacity-60"
             >
               {status === "loading" ? "Joining…" : "Join the list"}
             </button>

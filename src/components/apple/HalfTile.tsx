@@ -45,8 +45,8 @@ export function HalfTile({
         ) : null}
         {actions.length > 0 ? (
           <div className="mt-4 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
-            {actions.map((a) => (
-              <ChevronLink key={a.href + a.label} href={a.href} variant={a.variant}>
+            {actions.map((a, i) => (
+              <ChevronLink key={`${a.href}-${i}`} href={a.href} variant={a.variant}>
                 {a.label}
               </ChevronLink>
             ))}

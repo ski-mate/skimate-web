@@ -99,6 +99,15 @@ function toFeatureCollection(
   };
 }
 
+/**
+ * Camera moves are animations. Someone who has asked the system to reduce
+ * motion should be taken to the new view, not flown there.
+ */
+function prefersReducedMotion(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
 /** Reads the scheme the page is actually rendering in, including `auto`. */
 function readScheme(): CartoScheme {
   if (typeof window === "undefined") return "light";
@@ -255,7 +264,9 @@ export function AtlasGlobe({ resorts, visible, selected, onSelect }: AtlasGlobeP
         ? null
         : HOME;
     firstFrame.current = true;
-    if (frame) m.easeTo({ ...frame, duration: 900 });
+    if (!frame) return;
+    if (prefersReducedMotion()) m.jumpTo(frame);
+    else m.easeTo({ ...frame, duration: 900 });
   }, [resorts, visible]);
 
   useEffect(() => {
@@ -264,12 +275,12 @@ export function AtlasGlobe({ resorts, visible, selected, onSelect }: AtlasGlobeP
     if (!m.getLayer(RING_LAYER)) return;
     m.setFilter(RING_LAYER, ["==", ["get", "slug"], selected?.slug ?? ""]);
     if (selected) {
-      m.flyTo({
-        center: [selected.lng, selected.lat],
+      const target = {
+        center: [selected.lng, selected.lat] as [number, number],
         zoom: Math.max(m.getZoom(), RESORT_ZOOM),
-        speed: 0.9,
-        curve: 1.4,
-      });
+      };
+      if (prefersReducedMotion()) m.jumpTo(target);
+      else m.flyTo({ ...target, speed: 0.9, curve: 1.4 });
     }
   }, [selected]);
 
@@ -316,7 +327,10 @@ export function AtlasGlobe({ resorts, visible, selected, onSelect }: AtlasGlobeP
 
   const home = useCallback(() => {
     onSelectRef.current(null);
-    map.current?.flyTo({ ...HOME, speed: 1.1 });
+    const m = map.current;
+    if (!m) return;
+    if (prefersReducedMotion()) m.jumpTo(HOME);
+    else m.flyTo({ ...HOME, speed: 1.1 });
   }, []);
 
   const toggleProjection = useCallback(() => {
@@ -347,7 +361,11 @@ export function AtlasGlobe({ resorts, visible, selected, onSelect }: AtlasGlobeP
         globe={globe}
         onHome={home}
         onToggleProjection={toggleProjection}
-        onZoom={(delta) => map.current?.zoomTo((map.current?.getZoom() ?? 2) + delta)}
+        onZoom={(delta) =>
+          map.current?.zoomTo((map.current?.getZoom() ?? 2) + delta, {
+            duration: prefersReducedMotion() ? 0 : 300,
+          })
+        }
       />
     </>
   );

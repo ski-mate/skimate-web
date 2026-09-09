@@ -19,7 +19,7 @@ export function ResortDirectory({ resorts }: { resorts: Resort[] }) {
             href={`#${g.continent.toLowerCase().replace(/\s+/g, "-")}`}
             className="type-caption rounded-pill border border-[var(--separator)] px-3 py-1.5 text-[var(--label-2)] hover:border-[var(--label-3)] hover:text-[var(--label)]"
           >
-            {g.continent} <span className="text-[var(--label-4)]">{g.count}</span>
+            {g.continent} <span className="text-[var(--label-3)]">{g.count}</span>
           </a>
         ))}
       </nav>

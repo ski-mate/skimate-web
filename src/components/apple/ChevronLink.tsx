@@ -25,7 +25,7 @@ export function ChevronLink({
       className={cn(
         "group inline-flex items-center gap-1.5 type-tagline",
         isPill
-          ? "rounded-pill bg-[var(--link)] px-[21px] py-[11px] text-white transition-colors hover:bg-[var(--link-hover)]"
+          ? "rounded-pill bg-[var(--link-fill)] px-[21px] py-[11px] text-white transition-colors hover:bg-[var(--link-fill-hover)]"
           : "text-[var(--link)] hover:underline underline-offset-[3px]",
         className
       )}

@@ -109,8 +109,16 @@
     }
   }
 
-  /* MapTiler's default attribution is restyled, never removed — the licence
-     requires it, and an unstyled control is the loudest thing on the page. */
+  /* The decorative resort-hero maps show their credit through <MapCredit>
+     instead; this control would sit unreadable under the scrim. The credit
+     itself is never removed — the licence requires it. */
+  .resort-map .maplibregl-ctrl-attrib,
+  .resort-map .maplibregl-ctrl-bottom-left {
+    display: none;
+  }
+
+  /* On /map the attribution stays where MapLibre puts it, restyled — an
+     unstyled control is the loudest thing on the page. */
   .atlas-map .maplibregl-ctrl-attrib {
     background: rgba(255, 255, 255, 0.7);
     border-radius: var(--radius-pill);
@@ -120,7 +128,15 @@
     margin: 0 8px 8px 0;
   }
   .atlas-map .maplibregl-ctrl-attrib a {
-    color: rgba(0, 0, 0, 0.5);
+    /* 0.5 alpha is #808080 on white — 3.94:1 at 10px, under AA. */
+    color: rgba(0, 0, 0, 0.68);
+    text-decoration: underline;
+  }
+  /* The floating map controls occupy the bottom-right corner, and overlapping
+     them shrinks the attribution's expand button below the 24px touch target.
+     The attribution sits inboard of them instead. */
+  .atlas-map .maplibregl-ctrl-bottom-right {
+    margin-right: 68px;
   }
   /* On wide screens the filter rail sits over the bottom-left corner, so the
      MapTiler logo is pushed clear of it rather than hidden. */

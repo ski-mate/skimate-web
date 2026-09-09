@@ -18,7 +18,8 @@ export const metadata: Metadata = pageMetadata({
 
 function Tick({ on }: { on: boolean }) {
   return on ? (
-    <span className="text-[var(--piste-green)]" aria-label="Included">
+    <span className="inline-flex items-center text-[var(--piste-green)]">
+      <span className="sr-only">Included</span>
       <svg viewBox="0 0 14 14" className="h-3.5 w-3.5" fill="none" aria-hidden="true">
         <path
           d="M2 7.5l3.5 3.5L12 3"
@@ -30,7 +31,8 @@ function Tick({ on }: { on: boolean }) {
       </svg>
     </span>
   ) : (
-    <span className="text-[var(--label-4)]" aria-label="Not included">
+    <span className="inline-flex items-center text-[var(--label-3)]">
+      <span className="sr-only">Not included</span>
       <svg viewBox="0 0 14 14" className="h-3.5 w-3.5" fill="none" aria-hidden="true">
         <path d="M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
       </svg>
@@ -112,7 +114,7 @@ export default function PricingPage() {
                       {row.feature}
                       <StatusBadge status={row.status} />
                       {row.note ? (
-                        <span className="type-caption ml-2 text-[var(--label-4)]">
+                        <span className="type-caption ml-2 text-[var(--label-3)]">
                           {row.note}
                         </span>
                       ) : null}

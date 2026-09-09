@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Container, SectionScheme } from "@/components/apple";
 import { ResortDirectory } from "@/components/resorts/ResortDirectory";
+import { MapCredit } from "@/components/resorts/MapCredit";
 import { ResortMapLazy } from "@/components/resorts/ResortMapLazy";
 import { liveResorts, resorts } from "@/content/resorts";
 import { pageMetadata } from "@/lib/seo";
@@ -18,7 +19,7 @@ export default function ResortsPage() {
   return (
     <>
       <SectionScheme scheme="dark" className="relative">
-        <div className="absolute inset-0" aria-hidden="true">
+        <div className="absolute inset-0">
           <ResortMapLazy resorts={resorts} />
         </div>
         {/* Legibility scrim over the map. */}
@@ -26,6 +27,7 @@ export default function ResortsPage() {
           className="absolute inset-0 bg-gradient-to-b from-black/85 via-black/45 to-black/85"
           aria-hidden="true"
         />
+        <MapCredit className="absolute bottom-3 right-gutter z-10" />
         <Container className="relative py-section text-center">
           <p className="type-eyebrow mb-1">Resorts</p>
           <h1 className="type-display-2 text-balance">Find your mountain.</h1>

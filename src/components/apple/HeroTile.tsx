@@ -6,7 +6,13 @@ import type { ReactNode } from "react";
 
 export interface TileAction {
   href: string;
-  label: string;
+  /**
+   * ReactNode rather than string so a repeated visible label like "Learn more"
+   * can carry a visually-hidden suffix naming its destination. Six identical
+   * "Learn more" links on one page are ambiguous to a screen reader and are
+   * flagged by Lighthouse as non-descriptive.
+   */
+  label: ReactNode;
   variant?: "default" | "pill";
 }
 
@@ -74,8 +80,8 @@ export function HeroTile({
 
         {actions.length > 0 ? (
           <div className="mt-5 flex flex-wrap items-center justify-center gap-x-7 gap-y-3">
-            {actions.map((a) => (
-              <ChevronLink key={a.href + a.label} href={a.href} variant={a.variant}>
+            {actions.map((a, i) => (
+              <ChevronLink key={`${a.href}-${i}`} href={a.href} variant={a.variant}>
                 {a.label}
               </ChevronLink>
             ))}

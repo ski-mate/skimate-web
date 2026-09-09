@@ -17,7 +17,7 @@ export function StatusBadge({
   return (
     <span className="ml-2 inline-flex gap-1.5 align-middle">
       {pro ? (
-        <span className="type-caption rounded-pill bg-[var(--link)] px-2 py-0.5 font-medium text-white">
+        <span className="type-caption rounded-pill bg-[var(--link-fill)] px-2 py-0.5 font-medium text-white">
           Pro
         </span>
       ) : null}

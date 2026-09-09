@@ -5,6 +5,7 @@ import type { Graph } from "schema-dts";
 import { ChevronLink, Container, SectionScheme } from "@/components/apple";
 import { Breadcrumbs } from "@/components/guide/Breadcrumbs";
 import { JsonLd } from "@/components/marketing/JsonLd";
+import { MapCredit } from "@/components/resorts/MapCredit";
 import { ResortMapLazy } from "@/components/resorts/ResortMapLazy";
 import { getResort, liveResorts, relatedResorts, verticalDrop } from "@/content/resorts";
 import type { Resort } from "@/content/resorts/types";
@@ -91,13 +92,14 @@ export default function ResortPage({ params }: { params: { slug: string } }) {
       <JsonLd graph={resortGraph(resort)} />
 
       <SectionScheme scheme="dark" className="relative">
-        <div className="absolute inset-0" aria-hidden="true">
+        <div className="absolute inset-0">
           <ResortMapLazy resorts={[resort]} />
         </div>
         <div
           className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/45 to-black/90"
           aria-hidden="true"
         />
+        <MapCredit className="absolute bottom-3 right-gutter z-10" />
         <Container className="relative py-section">
           <Breadcrumbs
             trail={[

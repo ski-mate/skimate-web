@@ -49,7 +49,7 @@ export function AtlasFilters({
         <h1 className="type-title mt-1 text-label">Every resort we know</h1>
         <p className="type-caption mt-1.5 text-label-3">
           {totals.resorts} resorts across {totals.countries} countries.{" "}
-          <Link href="/resorts" className="text-link hover:underline">
+          <Link href="/resorts" className="text-link underline underline-offset-2">
             Browse the directory
           </Link>
           .
@@ -71,7 +71,7 @@ export function AtlasFilters({
             value={filters.query}
             onChange={(e) => onChange({ ...filters, query: e.target.value })}
             placeholder="Resort, region or country"
-            className="type-footnote w-full bg-transparent text-label outline-none placeholder:text-label-4"
+            className="type-footnote w-full bg-transparent text-label outline-none placeholder:text-label-3"
           />
         </div>
       </div>
@@ -90,7 +90,7 @@ export function AtlasFilters({
             }
           />
         ))}
-        <p className="type-caption px-2 pt-1.5 text-label-4">
+        <p className="type-caption px-2 pt-1.5 text-label-3">
           Only resorts we have mapped are marked available. The rest are catalogued and
           not yet navigable.
         </p>

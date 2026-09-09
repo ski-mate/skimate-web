@@ -79,7 +79,7 @@ export default function SectionPage({
             {planned.map((a) => (
               <li key={a.slug}>
                 <p className="type-callout text-[var(--label-3)]">{a.title}</p>
-                <p className="type-caption text-[var(--label-4)]">{a.description}</p>
+                <p className="type-caption text-[var(--label-3)]">{a.description}</p>
               </li>
             ))}
           </ul>

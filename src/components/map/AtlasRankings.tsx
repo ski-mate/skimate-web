@@ -30,7 +30,7 @@ export function AtlasRankings({
           <AtlasPanelTitle>{list.title}</AtlasPanelTitle>
           <ul className="px-2 pb-2">
             {list.rows.length === 0 ? (
-              <li className="type-caption px-2 py-1.5 text-label-4">
+              <li className="type-caption px-2 py-1.5 text-label-3">
                 No resorts match the filters.
               </li>
             ) : (
@@ -60,7 +60,7 @@ export function AtlasRankings({
                           style={{ width: `${Math.max(6, row.fraction * 100)}%` }}
                         />
                       </span>
-                      <span className="type-caption max-w-[45%] shrink-0 truncate text-label-4">
+                      <span className="type-caption max-w-[45%] shrink-0 truncate text-label-3">
                         {row.sublabel}
                       </span>
                     </span>
