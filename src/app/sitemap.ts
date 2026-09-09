@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/seo";
 import { guideSections, publishedArticles } from "@/content/guide";
+import { liveResorts } from "@/content/resorts";
 
 /**
  * Static list rather than sniffing the request host, which made this route
@@ -47,5 +48,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
     })),
   ];
 
-  return [...staticRoutes, ...guideRoutes];
+  // Only mapped resorts have pages; catalogued ones are listed on /resorts only.
+  const resortRoutes: MetadataRoute.Sitemap = [
+    {
+      url: `${SITE_URL}/resorts`,
+      lastModified,
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
+    },
+    ...liveResorts.map((r) => ({
+      url: `${SITE_URL}/resorts/${r.slug}`,
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })),
+  ];
+
+  return [...staticRoutes, ...guideRoutes, ...resortRoutes];
 }
