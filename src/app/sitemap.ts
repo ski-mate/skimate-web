@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/seo";
 import { guideSections, publishedArticles } from "@/content/guide";
 import { liveResorts } from "@/content/resorts";
+import { featureAreas } from "@/content/features";
 
 /**
  * Static list rather than sniffing the request host, which made this route
@@ -64,5 +65,31 @@ export default function sitemap(): MetadataRoute.Sitemap {
     })),
   ];
 
-  return [...staticRoutes, ...guideRoutes, ...resortRoutes];
+  const featureRoutes: MetadataRoute.Sitemap = [
+    {
+      url: `${SITE_URL}/features`,
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+    },
+    ...featureAreas.map((a) => ({
+      url: `${SITE_URL}/features/${a.slug}`,
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })),
+    {
+      url: `${SITE_URL}/pricing`,
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+    },
+  ];
+
+  return [
+    ...staticRoutes,
+    ...featureRoutes,
+    ...guideRoutes,
+    ...resortRoutes,
+  ];
 }
