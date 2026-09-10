@@ -8,7 +8,8 @@ import { featureAreas } from "@/content/features";
  * Static list rather than sniffing the request host, which made this route
  * dynamic and emitted preview-domain URLs into the sitemap.
  *
- * /style is deliberately excluded — it is an internal, noindex surface.
+ * /style and /console are deliberately excluded — both are internal,
+ * noindex surfaces, and /console is behind authentication as well.
  */
 const routes: { path: string; priority: number; changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"] }[] = [
   { path: "", priority: 1, changeFrequency: "weekly" },
