@@ -1,6 +1,4 @@
 import { Analytics } from "@vercel/analytics/next";
-import { GlobalNav } from "@/components/apple/GlobalNav";
-import { SiteFooter } from "@/components/apple/SiteFooter";
 import { site } from "@/content/site";
 import { fontInter } from "@/lib/fonts";
 import { constructMetadata } from "@/lib/utils";
@@ -18,6 +16,11 @@ export const viewport: Viewport = {
   ],
 };
 
+/**
+ * The root layout carries only the document. Site chrome lives one level down:
+ * the (marketing) group owns the global nav and footer, the (console) group
+ * owns the workstation shell. They share nothing but tokens.
+ */
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
@@ -26,15 +29,7 @@ export default function RootLayout({
     // so a dark tile stays dark under a light system theme.
     <html lang="en" data-scheme="auto" className={fontInter.variable}>
       <body className="min-h-screen scroll-smooth">
-        <a
-          href="#main"
-          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-card focus:bg-[var(--bg)] focus:px-4 focus:py-2"
-        >
-          Skip to content
-        </a>
-        <GlobalNav />
-        <main id="main">{children}</main>
-        <SiteFooter />
+        {children}
         <Analytics />
       </body>
     </html>
