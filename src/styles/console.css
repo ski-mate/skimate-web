@@ -1,0 +1,100 @@
+/*
+ * Ingestion Console styles.
+ *
+ * The console reuses the site's colour tokens (--bg, --label, --separator …)
+ * so it looks like the same product, but it is a workstation rather than a
+ * marketing page: rows are 32–36px instead of 44, type is 12–13px instead of
+ * 17, and density beats whitespace everywhere. One analyst is going to look at
+ * this for six hours a day.
+ *
+ * Status colours come from the iOS system palette already in tokens.css, used
+ * consistently: red blocks, orange warns, green passes, blue is actionable.
+ */
+
+.console-root {
+  /* Density */
+  --c-row-h: 34px;
+  --c-rail: 244px;
+  --c-header-h: 48px;
+  --c-pad: 12px;
+
+  /* Status */
+  --c-blocked: #ff3b30;
+  --c-blocked-bg: rgba(255, 59, 48, 0.1);
+  --c-ready: #007aff;
+  --c-ready-bg: rgba(0, 122, 255, 0.1);
+  --c-warn: #ff9500;
+  --c-warn-bg: rgba(255, 149, 0, 0.12);
+  --c-pass: #34c759;
+  --c-pass-bg: rgba(52, 199, 89, 0.12);
+  --c-waiting: #8e8e93;
+  --c-waiting-bg: rgba(142, 142, 147, 0.14);
+  --c-waived: #af52de;
+  --c-waived-bg: rgba(175, 82, 222, 0.12);
+
+  /* Source chips — provenance is first-class, so each source is recognisable
+     at a glance rather than needing to be read. */
+  --c-osm: #7cb342;
+  --c-overture: #5e5ce6;
+  --c-fsq: #ff2d55;
+  --c-wikidata: #0f9d9d;
+  --c-manual: #8e8e93;
+
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--label);
+  background: var(--bg-elevated);
+}
+
+@media (prefers-color-scheme: dark) {
+  .console-root {
+    --c-blocked-bg: rgba(255, 69, 58, 0.18);
+    --c-ready-bg: rgba(10, 132, 255, 0.18);
+    --c-warn-bg: rgba(255, 159, 10, 0.2);
+    --c-pass-bg: rgba(48, 209, 88, 0.2);
+    --c-waiting-bg: rgba(142, 142, 147, 0.22);
+    --c-waived-bg: rgba(191, 90, 242, 0.2);
+  }
+}
+
+/* Numeric columns must line up; proportional digits make counts unscannable. */
+.console-root .tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* A queue row that the keyboard is currently on. The ring is drawn inside so
+   it never shifts the row, and it reads in both schemes. */
+.console-root .queue-row[data-active="true"] {
+  box-shadow: inset 0 0 0 2px var(--c-ready);
+  background: var(--c-ready-bg);
+}
+
+.console-root .queue-row {
+  scroll-margin-block: 96px;
+}
+
+/* Scrollbars: visible, because these panes scroll constantly. */
+.console-root .scroll-y {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+/* MapTiler's own attribution styling fights the console chrome. It stays
+   visible — the licence requires it — but at console scale. */
+.console-map .maplibregl-ctrl-attrib,
+.console-map .maplibregl-ctrl-bottom-right {
+  font-size: 10px;
+}
+
+.console-map .maplibregl-ctrl-logo {
+  transform: scale(0.8);
+  transform-origin: bottom left;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .console-root * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
