@@ -13,6 +13,7 @@
  */
 
 import { z } from "zod";
+import { getConsoleSession } from "@/lib/console/auth";
 import {
   AuditListResponse,
   CandidateSearchResponse,
@@ -70,7 +71,14 @@ function buildPath(route: RouteName, params: string[]): string {
 async function call<S extends z.ZodTypeAny>(
   route: RouteName,
   schema: S,
-  opts: { params?: string[]; query?: Record<string, unknown>; body?: unknown; actor?: Actor }
+  opts: {
+    params?: string[];
+    query?: Record<string, unknown>;
+    body?: unknown;
+    actor?: Actor;
+    /** Routes whose contract return type is `T | null`: a 404 is data, not an error. */
+    nullOn404?: boolean;
+  }
 ): Promise<z.infer<S>> {
   const spec = ROUTES[route];
   const url = new URL(baseUrl() + buildPath(route, opts.params ?? []));
@@ -81,12 +89,15 @@ async function call<S extends z.ZodTypeAny>(
   }
 
   const headers: Record<string, string> = { accept: "application/json" };
+  // The backend's ConsoleGuard wants the shared secret on every request…
   if (process.env.INGESTION_API_TOKEN) {
-    headers.authorization = `Bearer ${process.env.INGESTION_API_TOKEN}`;
+    headers["x-alpline-console-key"] = process.env.INGESTION_API_TOKEN;
   }
-  // The backend records this as the actor on every audit row. It is taken from
-  // the console session server-side; the browser never supplies it.
-  if (opts.actor) headers["x-alpline-actor"] = opts.actor.email;
+  // …and an actor on every request, reads included — the audit trail names
+  // whoever's session drove the call. Taken from the console session
+  // server-side; the browser never supplies it.
+  const actor = opts.actor ?? (await getConsoleSession())?.actor;
+  if (actor) headers["x-alpline-actor"] = actor.email;
   if (opts.body !== undefined) headers["content-type"] = "application/json";
 
   const res = await fetch(url, {
@@ -96,6 +107,9 @@ async function call<S extends z.ZodTypeAny>(
     cache: "no-store",
   });
 
+  if (res.status === 404 && opts.nullOn404) {
+    return null as z.infer<S>;
+  }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new IngestionApiError(
@@ -122,7 +136,10 @@ export const httpIngestionApi: IngestionApi = {
   getWorklist: (query) => call("getWorklist", WorklistResponse, { query }),
 
   getRegistryEntry: (registryId) =>
-    call("getRegistryEntry", RegistryEntry.nullable(), { params: [registryId] }),
+    call("getRegistryEntry", RegistryEntry.nullable(), {
+      params: [registryId],
+      nullOn404: true,
+    }),
 
   searchCandidates: (query) =>
     call("searchCandidates", CandidateSearchResponse, {
@@ -130,7 +147,10 @@ export const httpIngestionApi: IngestionApi = {
     }),
 
   getManifest: (manifestId) =>
-    call("getManifest", OnboardingManifest.nullable(), { params: [manifestId] }),
+    call("getManifest", OnboardingManifest.nullable(), {
+      params: [manifestId],
+      nullOn404: true,
+    }),
 
   saveManifest: (manifest, actor) =>
     call("saveManifest", OnboardingManifest, { body: manifest, actor }),
@@ -138,12 +158,18 @@ export const httpIngestionApi: IngestionApi = {
   validateManifest: (manifest) =>
     call("validateManifest", ManifestValidation, { body: manifest }),
 
-  submitManifest: (manifest, actor) =>
-    call("submitManifest", SubmitManifestResponse, {
-      params: [manifest.manifestId],
+  // The backend submits the stored draft by id, so persist the latest edit
+  // first — the interface hands us the whole manifest for exactly this reason.
+  submitManifest: async (manifest, actor) => {
+    const saved = await call("saveManifest", OnboardingManifest, {
       body: manifest,
       actor,
-    }),
+    });
+    return call("submitManifest", SubmitManifestResponse, {
+      params: [saved.manifestId],
+      actor,
+    });
+  },
 
   getHarvest: (runId) => call("getHarvest", HarvestResponse, { params: [runId] }),
 
@@ -181,7 +207,8 @@ export const httpIngestionApi: IngestionApi = {
 
   listRuns: (query) => call("listRuns", RunListResponse, { query }),
 
-  getRun: (runId) => call("getRun", IngestionRun.nullable(), { params: [runId] }),
+  getRun: (runId) =>
+    call("getRun", IngestionRun.nullable(), { params: [runId], nullOn404: true }),
 
   triggerRun: (registryId, req, actor) =>
     call("triggerRun", TriggerRunResponse, { params: [registryId], body: req, actor }),

@@ -1,16 +1,17 @@
 import { notFound } from "next/navigation";
 import { EnrichmentGate } from "@/components/console/enrichment/EnrichmentGate";
 import { getIngestionApi } from "@/lib/ingestion/client";
+import { latestRunIdForStage } from "@/lib/ingestion/runs";
 
 export const dynamic = "force-dynamic";
 
 export default async function EnrichmentPage({ params }: { params: { id: string } }) {
   const api = getIngestionApi();
-  const { rows } = await api.getWorklist({ limit: 500 });
-  const row = rows.find((r) => r.registryId === params.id);
-  if (!row) notFound();
+  const entry = await api.getRegistryEntry(params.id);
+  if (!entry) notFound();
 
-  if (!row.lastRunId) {
+  const runId = await latestRunIdForStage(api, params.id, "enrichment");
+  if (!runId) {
     return (
       <div className="flex h-full items-center justify-center p-8 text-center">
         <p className="max-w-[46ch] text-[12px] text-[var(--label-3)]">
@@ -22,8 +23,8 @@ export default async function EnrichmentPage({ params }: { params: { id: string 
   }
 
   const [estimate, report] = await Promise.all([
-    api.getEnrichmentEstimate(row.lastRunId),
-    api.getEnrichmentReport(row.lastRunId),
+    api.getEnrichmentEstimate(runId),
+    api.getEnrichmentReport(runId),
   ]);
 
   return <EnrichmentGate estimate={estimate} report={report} registryId={params.id} />;

@@ -18,7 +18,11 @@ export default async function OnboardingPage({
   // A worklist row can deep-link here with ?seed=<registryId>, so the wizard
   // opens already looking at the entry the analyst clicked.
   const seedEntry = searchParams.seed ? await api.getRegistryEntry(searchParams.seed) : null;
-  const initial = await api.searchCandidates({ q: seedEntry?.name ?? "", limit: 20 });
+  // The contract requires a non-empty q; with no seed the wizard opens with an
+  // empty result and the analyst's first search populates it.
+  const initial = seedEntry?.name
+    ? await api.searchCandidates({ q: seedEntry.name, limit: 20 })
+    : { candidates: [], duplicates: [] };
 
   const now = new Date().toISOString();
   const draft: OnboardingManifest = {
