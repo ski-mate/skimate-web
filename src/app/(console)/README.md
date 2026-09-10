@@ -8,6 +8,12 @@ site's design tokens and its MapTiler setup, and nothing else: no marketing nav,
 no footer, no indexing, and its own denser type and row metrics. It is a
 workstation, not a page.
 
+Maps go through `src/lib/map/cartography.ts`, which fetches MapTiler's
+**winter-v4** style — the same one alpline-mobile uses — restyles the JSON to
+the Apple palette, and hands the finished style to the map. There is no style
+enum to resolve and therefore no default style to fall back to, and the module
+warns in development if a layer id it targets has disappeared from the style.
+
 ---
 
 ## What it is for

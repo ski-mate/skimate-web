@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as maptilersdk from "@maptiler/sdk";
 import "@maptiler/sdk/dist/maptiler-sdk.css";
-import { applyAtlasCartography, type CartoScheme } from "@/lib/map/cartography";
+import {
+  loadAtlasStyle,
+  repaintAtlasCartography,
+  type CartoScheme,
+} from "@/lib/map/cartography";
 import type { Resort } from "@/content/resorts/types";
 
 const KEY =
@@ -155,90 +159,100 @@ export function AtlasGlobe({ resorts, visible, selected, onSelect }: AtlasGlobeP
   // below rather than rebuilding the map, which would restart every tile load.
   useEffect(() => {
     if (!container.current || map.current || !KEY) return;
+    let cancelled = false;
 
-    maptilersdk.config.apiKey = KEY;
-    const m = new maptilersdk.Map({
-      container: container.current,
-      style: maptilersdk.MapStyle.WINTER,
-      projection: "globe",
-      ...HOME,
-      minZoom: 1,
-      maxZoom: 16,
-      navigationControl: false,
-      geolocateControl: false,
-      scaleControl: false,
-      fullscreenControl: false,
-      terrainControl: false,
-      // Without this the map swallows page scroll and the footer becomes
-      // unreachable. Cmd/Ctrl + scroll still zooms.
-      cooperativeGestures: true,
-      attributionControl: { compact: true },
-    });
-    map.current = m;
+    // The restyled style is fetched before the map is constructed, so the globe
+    // never renders a frame of MapTiler's default style on the way to winter.
+    void buildMap();
 
-    m.on("load", () => {
-      ready.current = true;
-      applyAtlasCartography(m, readScheme());
+    async function buildMap() {
+      const style = await loadAtlasStyle(KEY, readScheme()).catch(() => null);
+      if (cancelled || !style || !container.current || map.current) return;
 
-      m.addSource(SOURCE, {
-        type: "geojson",
-        data: toFeatureCollection(resorts, visibleRef.current),
+      maptilersdk.config.apiKey = KEY;
+      const m = new maptilersdk.Map({
+        container: container.current,
+        style,
+        projection: "globe",
+        ...HOME,
+        minZoom: 1,
+        maxZoom: 16,
+        navigationControl: false,
+        geolocateControl: false,
+        scaleControl: false,
+        fullscreenControl: false,
+        terrainControl: false,
+        // Without this the map swallows page scroll and the footer becomes
+        // unreachable. Cmd/Ctrl + scroll still zooms.
+        cooperativeGestures: true,
+        attributionControl: { compact: true },
       });
+      map.current = m;
 
-      m.addLayer({
-        id: RING_LAYER,
-        type: "circle",
-        source: SOURCE,
-        filter: ["==", ["get", "slug"], ""],
-        paint: {
-          "circle-radius": 13,
-          "circle-color": "rgba(0,123,254,0.18)",
-          "circle-stroke-width": 1.5,
-          "circle-stroke-color": "#007bfe",
-        },
-      });
+      m.on("load", () => {
+        ready.current = true;
 
-      m.addLayer({
-        id: DOT_LAYER,
-        type: "circle",
-        source: SOURCE,
-        paint: {
-          "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 3, 5, 5.5, 10, 8],
-          // Live coverage is the Maps accent; catalogued resorts are the muted
-          // grey Apple gives every out-of-focus place. The map should never
-          // imply more coverage than exists.
-          "circle-color": [
-            "case",
-            ["==", ["get", "live"], 1],
-            dotColors(readScheme()).live,
-            dotColors(readScheme()).muted,
-          ],
-          "circle-stroke-width": 1.25,
-          "circle-stroke-color": dotColors(readScheme()).stroke,
-          "circle-opacity": ["case", ["==", ["get", "dim"], 1], 0.14, 1],
-          "circle-stroke-opacity": ["case", ["==", ["get", "dim"], 1], 0.1, 1],
-        },
-      });
+        m.addSource(SOURCE, {
+          type: "geojson",
+          data: toFeatureCollection(resorts, visibleRef.current),
+        });
 
-      m.on("click", DOT_LAYER, (e) => {
-        const slug = e.features?.[0]?.properties?.slug;
-        if (typeof slug === "string") onSelectRef.current(slug);
+        m.addLayer({
+          id: RING_LAYER,
+          type: "circle",
+          source: SOURCE,
+          filter: ["==", ["get", "slug"], ""],
+          paint: {
+            "circle-radius": 13,
+            "circle-color": "rgba(0,123,254,0.18)",
+            "circle-stroke-width": 1.5,
+            "circle-stroke-color": "#007bfe",
+          },
+        });
+
+        m.addLayer({
+          id: DOT_LAYER,
+          type: "circle",
+          source: SOURCE,
+          paint: {
+            "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 3, 5, 5.5, 10, 8],
+            // Live coverage is the Maps accent; catalogued resorts are the muted
+            // grey Apple gives every out-of-focus place. The map should never
+            // imply more coverage than exists.
+            "circle-color": [
+              "case",
+              ["==", ["get", "live"], 1],
+              dotColors(readScheme()).live,
+              dotColors(readScheme()).muted,
+            ],
+            "circle-stroke-width": 1.25,
+            "circle-stroke-color": dotColors(readScheme()).stroke,
+            "circle-opacity": ["case", ["==", ["get", "dim"], 1], 0.14, 1],
+            "circle-stroke-opacity": ["case", ["==", ["get", "dim"], 1], 0.1, 1],
+          },
+        });
+
+        m.on("click", DOT_LAYER, (e) => {
+          const slug = e.features?.[0]?.properties?.slug;
+          if (typeof slug === "string") onSelectRef.current(slug);
+        });
+        m.on("click", (e) => {
+          const hits = m.queryRenderedFeatures(e.point, { layers: [DOT_LAYER] });
+          if (hits.length === 0) onSelectRef.current(null);
+        });
+        m.on("mouseenter", DOT_LAYER, () => {
+          m.getCanvas().style.cursor = "pointer";
+        });
+        m.on("mouseleave", DOT_LAYER, () => {
+          m.getCanvas().style.cursor = "";
+        });
       });
-      m.on("click", (e) => {
-        const hits = m.queryRenderedFeatures(e.point, { layers: [DOT_LAYER] });
-        if (hits.length === 0) onSelectRef.current(null);
-      });
-      m.on("mouseenter", DOT_LAYER, () => {
-        m.getCanvas().style.cursor = "pointer";
-      });
-      m.on("mouseleave", DOT_LAYER, () => {
-        m.getCanvas().style.cursor = "";
-      });
-    });
+    }
 
     return () => {
+      cancelled = true;
       ready.current = false;
-      m.remove();
+      map.current?.remove();
       map.current = null;
     };
     // `resorts` is a build-time constant; re-running would tear down the map.
@@ -306,7 +320,7 @@ export function AtlasGlobe({ resorts, visible, selected, onSelect }: AtlasGlobeP
   useEffect(() => {
     const m = map.current;
     if (!m || !ready.current) return;
-    applyAtlasCartography(m, scheme);
+    repaintAtlasCartography(m, scheme);
 
     if (!m.getLayer(DOT_LAYER)) return;
     const c = dotColors(scheme);
