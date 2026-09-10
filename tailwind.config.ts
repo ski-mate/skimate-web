@@ -1,85 +1,98 @@
 import type { Config } from "tailwindcss";
 
 const config = {
-  darkMode: ["class"],
-  content: [
-    "./pages/**/*.{ts,tsx}",
-    "./components/**/*.{ts,tsx}",
-    "./app/**/*.{ts,tsx}",
-    "./src/**/*.{ts,tsx}",
+  // Sections pin a scheme with data-scheme; "auto" resolves via prefers-color-scheme.
+  darkMode: [
+    "variant",
+    [
+      "&:where([data-scheme='dark'], [data-scheme='dark'] *)",
+      "@media (prefers-color-scheme: dark) { &:where([data-scheme='auto'], [data-scheme='auto'] *) }",
+    ],
   ],
+  content: ["./src/**/*.{ts,tsx}"],
   prefix: "",
   theme: {
-    container: {
-      center: true,
-      padding: "2rem",
-      screens: {
-        "2xl": "1200px",
-      },
-    },
     extend: {
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
-        primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+        // Marketing namespace
+        bg: "var(--bg)",
+        "bg-elevated": "var(--bg-elevated)",
+        "bg-inset": "var(--bg-inset)",
+        label: "var(--label)",
+        "label-2": "var(--label-2)",
+        "label-3": "var(--label-3)",
+        "label-4": "var(--label-4)",
+        link: "var(--link)",
+        "link-hover": "var(--link-hover)",
+        separator: "var(--separator)",
+        fill: "var(--fill)",
+        "fill-strong": "var(--fill-strong)",
+
+        // Piste difficulty, shared with the mobile app
+        piste: {
+          green: "var(--piste-green)",
+          blue: "var(--piste-blue)",
+          red: "var(--piste-red)",
+          black: "var(--piste-black)",
+          orange: "var(--piste-orange)",
         },
-        secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
+
+        // iOS namespace — device frames and /map chrome only
+        ios: {
+          blue: "var(--ios-blue)",
+          label: "var(--ios-label)",
+          "label-2": "var(--ios-label-2)",
+          bg: "var(--ios-bg)",
+          "bg-grouped": "var(--ios-bg-grouped)",
+          fill: "var(--ios-fill)",
+          "fill-tertiary": "var(--ios-fill-tertiary)",
+          separator: "var(--ios-separator)",
         },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
-        },
-        muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
-        },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
-        },
-        popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
-        },
-        card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
-        },
+
+        // Compatibility aliases so the kept shadcn primitives keep rendering
+        // until they are restyled in P1.
+        background: "var(--bg)",
+        foreground: "var(--label)",
+        border: "var(--separator)",
+        input: "var(--separator)",
+        ring: "var(--link)",
+        primary: { DEFAULT: "var(--link)", foreground: "#ffffff" },
+        muted: { DEFAULT: "var(--bg-elevated)", foreground: "var(--label-3)" },
+        accent: { DEFAULT: "var(--fill)", foreground: "var(--label)" },
+      },
+      maxWidth: {
+        wide: "var(--container-wide)",
+        content: "var(--container-content)",
+        guide: "var(--container-guide)",
+      },
+      spacing: {
+        gutter: "var(--gutter)",
+        nav: "var(--nav-h)",
+        section: "var(--section-y)",
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        sm: "var(--radius-sm)",
+        card: "var(--radius-card)",
+        tile: "var(--radius-tile)",
+        large: "var(--radius-large)",
+        pill: "var(--radius-pill)",
+      },
+      boxShadow: {
+        card: "var(--shadow-card)",
+        float: "var(--shadow-float)",
+      },
+      screens: {
+        // apple.com's real breakpoints
+        sm: "320px",
+        md: "735px",
+        lg: "1069px",
+        xl: "1441px",
       },
       animation: {
-        marquee: "marquee var(--duration) linear infinite",
-        "marquee-vertical": "marquee-vertical var(--duration) linear infinite",
-        "border-beam": "border-beam calc(var(--duration)*1s) infinite linear",
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        ripple: "ripple var(--duration,2s) ease calc(var(--i, 0)*.2s) infinite",
       },
       keyframes: {
-        marquee: {
-          from: { transform: "translateX(0)" },
-          to: { transform: "translateX(calc(-100% - var(--gap)))" },
-        },
-        "marquee-vertical": {
-          from: { transform: "translateY(0)" },
-          to: { transform: "translateY(calc(-100% - var(--gap)))" },
-        },
-        "border-beam": {
-          "100%": {
-            "offset-distance": "100%",
-          },
-        },
         "accordion-down": {
           from: { height: "0" },
           to: { height: "var(--radix-accordion-content-height)" },
@@ -88,18 +101,10 @@ const config = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
-        ripple: {
-          "0%, 100%": {
-            transform: "translate(-50%, -50%) scale(1)",
-          },
-          "50%": {
-            transform: "translate(-50%, -50%) scale(0.9)",
-          },
-        },
       },
     },
   },
-  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
+  plugins: [require("tailwindcss-animate")],
 } satisfies Config;
 
 export default config;

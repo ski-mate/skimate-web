@@ -1,14 +1,13 @@
-import {
-  JetBrains_Mono as FontMono,
-  Inter as FontSans,
-} from "next/font/google";
+import { Inter } from "next/font/google";
 
-export const fontSans = FontSans({
+/**
+ * Inter is a *fallback* only. Apple-platform visitors resolve to real SF via
+ * -apple-system in --font-stack and never download this, so preloading it would
+ * waste bytes for most of the audience.
+ */
+export const fontInter = Inter({
   subsets: ["latin"],
-  variable: "--font-sans",
-});
-
-export const fontMono = FontMono({
-  subsets: ["latin"],
-  variable: "--font-mono",
+  variable: "--font-inter",
+  display: "swap",
+  preload: false,
 });

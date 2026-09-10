@@ -1,0 +1,157 @@
+/*
+ * Alpline design tokens.
+ *
+ * Two deliberately separate namespaces:
+ *   --*      marketing chrome (apple.com-style web palette)
+ *   --ios-*  iOS system palette, used ONLY inside device frames and the /map demo
+ * Mixing them is the fastest way to make the site look off.
+ *
+ * iOS values transcribed from alpline-admin/apple-ui-brain/00-foundations/
+ * (colors.md, layout.md, materials.md) and kept in sync with
+ * alpline-mobile/src/shared/utils/design/colors.ts.
+ */
+
+:root,
+[data-scheme="light"] {
+  --bg: #ffffff;
+  --bg-elevated: #f5f5f7;
+  --bg-inset: #fafafc;
+
+  --label: #1d1d1f;
+  --label-2: rgba(29, 29, 31, 0.72);
+  /* 0.64, not 0.56: at 11px the lighter value is 3.94:1 on white, under AA. */
+  --label-3: rgba(29, 29, 31, 0.64);
+  --label-4: rgba(29, 29, 31, 0.36);
+
+  --link: #0066cc;
+  --link-hover: #0077ed;
+
+  /* Filled controls. Kept at Apple's button blue in every scheme: white on
+     #2997ff is 3.01:1, below AA, so the dark palette must not reuse --link
+     here. White on #0071e3 is 4.62:1. */
+  --link-fill: #0071e3;
+  --link-fill-hover: #0077ed;
+
+  --separator: rgba(0, 0, 0, 0.12);
+  --separator-strong: rgba(0, 0, 0, 0.22);
+
+  --nav-material: rgba(255, 255, 255, 0.72);
+  --nav-material-opaque: rgba(255, 255, 255, 0.98);
+  --nav-border: rgba(0, 0, 0, 0.18);
+
+  --fill: rgba(0, 0, 0, 0.05);
+  --fill-strong: rgba(0, 0, 0, 0.08);
+
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-float: 0 2px 4px rgba(0, 0, 0, 0.1), 0 6px 12px rgba(0, 0, 0, 0.1);
+
+  color-scheme: light;
+}
+
+[data-scheme="dark"] {
+  --bg: #000000;
+  --bg-elevated: #161617;
+  --bg-inset: #1d1d1f;
+
+  --label: #f5f5f7;
+  --label-2: rgba(245, 245, 247, 0.72);
+  --label-3: rgba(245, 245, 247, 0.56);
+  --label-4: rgba(245, 245, 247, 0.36);
+
+  --link: #2997ff;
+  --link-hover: #52a8ff;
+
+  --link-fill: #0071e3;
+  --link-fill-hover: #0077ed;
+
+  --separator: rgba(255, 255, 255, 0.16);
+  --separator-strong: rgba(255, 255, 255, 0.28);
+
+  --nav-material: rgba(22, 22, 23, 0.8);
+  --nav-material-opaque: rgba(22, 22, 23, 0.98);
+  --nav-border: rgba(255, 255, 255, 0.16);
+
+  --fill: rgba(255, 255, 255, 0.08);
+  --fill-strong: rgba(255, 255, 255, 0.12);
+
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-float: 0 2px 4px rgba(0, 0, 0, 0.4), 0 6px 12px rgba(0, 0, 0, 0.4);
+
+  color-scheme: dark;
+}
+
+/* "auto" follows the OS. Sections that pin a scheme override it locally. */
+@media (prefers-color-scheme: dark) {
+  [data-scheme="auto"] {
+    --bg: #000000;
+    --bg-elevated: #161617;
+    --bg-inset: #1d1d1f;
+
+    --label: #f5f5f7;
+    --label-2: rgba(245, 245, 247, 0.72);
+    --label-3: rgba(245, 245, 247, 0.56);
+    --label-4: rgba(245, 245, 247, 0.36);
+
+    --link: #2997ff;
+    --link-hover: #52a8ff;
+
+    --separator: rgba(255, 255, 255, 0.16);
+    --separator-strong: rgba(255, 255, 255, 0.28);
+
+    --nav-material: rgba(22, 22, 23, 0.8);
+    --nav-material-opaque: rgba(22, 22, 23, 0.98);
+    --nav-border: rgba(255, 255, 255, 0.16);
+
+    --fill: rgba(255, 255, 255, 0.08);
+    --fill-strong: rgba(255, 255, 255, 0.12);
+
+    --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.5);
+    --shadow-float: 0 2px 4px rgba(0, 0, 0, 0.4), 0 6px 12px rgba(0, 0, 0, 0.4);
+
+    color-scheme: dark;
+  }
+}
+
+:root {
+  /* Layout — apple.com's real measurements */
+  --container-wide: 1440px;
+  --container-content: 980px;
+  --container-guide: 692px;
+  --gutter: 22px;
+  --nav-h: 44px;
+  --section-y: 108px;
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-card: 12px;
+  --radius-tile: 18px;
+  --radius-large: 28px;
+  --radius-pill: 980px;
+
+  /* Piste difficulty — iOS system palette, shared with the mobile app */
+  --piste-green: #34c759;
+  --piste-blue: #007aff;
+  --piste-red: #ff3b30;
+  --piste-black: #1d1d1f;
+  --piste-orange: #ff9500;
+
+  /* iOS namespace — device frames and /map chrome only */
+  --ios-blue: #007aff;
+  --ios-label: #000000;
+  --ios-label-2: rgba(60, 60, 67, 0.6);
+  --ios-label-3: rgba(60, 60, 67, 0.3);
+  --ios-bg: #ffffff;
+  --ios-bg-grouped: #f2f2f7;
+  --ios-fill: rgba(120, 120, 128, 0.2);
+  --ios-fill-tertiary: rgba(118, 118, 128, 0.12);
+  --ios-separator: rgba(60, 60, 67, 0.29);
+  --ios-material-chrome: rgba(255, 255, 255, 0.72);
+}
+
+@media (max-width: 734px) {
+  :root {
+    --gutter: 16px;
+    --nav-h: 48px;
+    --section-y: 64px;
+  }
+}

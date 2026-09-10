@@ -1,25 +1,24 @@
-import { Header } from "@/components/sections/header";
-import { Footer } from "@/components/sections/footer";
 import { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
+import { LegalDoc } from "@/components/marketing/LegalDoc";
 
-export const metadata: Metadata = {
-  title: "Terms of Service | Alpline",
-};
+export const metadata: Metadata = pageMetadata({
+  title: "Terms of Service",
+  description:
+    "The terms covering your use of Alpline, including acceptable use, safety disclaimers, subscriptions and your rights as a consumer.",
+  path: "/terms",
+});
 
 export default function TermsPage() {
   return (
-    <main className="relative">
-      <Header />
-      <div className="container py-24 md:py-32">
-        <article className="prose prose-lg dark:prose-invert mx-auto max-w-4xl">
-          <h1>Alpline Terms of Service</h1>
+    <LegalDoc title="Alpline Terms of Service">
           <p><strong>Last Updated: February 19, 2026</strong></p>
 
           <h2>Agreement to Terms</h2>
           <p>
             Welcome to Alpline. These Terms of Service (&ldquo;Terms&rdquo;) govern your access to and use of the Alpline mobile application, website, and related services (collectively, the &ldquo;Service&rdquo;). By downloading, installing, or using Alpline, you agree to be bound by these Terms.
           </p>
-          <p><strong>PLEASE READ THESE TERMS CAREFULLY BEFORE USING SKIMATE. IF YOU DO NOT AGREE TO THESE TERMS, DO NOT USE THE SERVICE.</strong></p>
+          <p><strong>PLEASE READ THESE TERMS CAREFULLY BEFORE USING ALPLINE. IF YOU DO NOT AGREE TO THESE TERMS, DO NOT USE THE SERVICE.</strong></p>
           <p>
             These Terms constitute a legally binding agreement between you and EXPOMATRIX PROPERTIES LIMITED (&ldquo;Alpline,&rdquo; &ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;), a company registered in England and Wales under Company Number 15639549, with its registered office at 23 Tiggall Close, Reading, RG6 7ES, United Kingdom.
           </p>
@@ -169,7 +168,7 @@ export default function TermsPage() {
           <p>Important limitations: Information is provided &ldquo;as is&rdquo; from third-party sources, may not be complete, current, or accurate, is not a substitute for official sources. You remain responsible for your own safety decisions. Always check official resort and avalanche forecasts.</p>
 
           <h3>6.3 No Liability for Safety Features</h3>
-          <p><strong>SKIMATE IS A NAVIGATION TOOL, NOT A SAFETY DEVICE.</strong> We provide safety features as a convenience, but do not guarantee accuracy or availability, are not liable for failures or inaccuracies, cannot guarantee emergency response times, are not responsible for third-party emergency services, and cannot replace proper safety equipment, training, or judgment.</p>
+          <p><strong>ALPLINE IS A NAVIGATION TOOL, NOT A SAFETY DEVICE.</strong> We provide safety features as a convenience, but do not guarantee accuracy or availability, are not liable for failures or inaccuracies, cannot guarantee emergency response times, are not responsible for third-party emergency services, and cannot replace proper safety equipment, training, or judgment.</p>
           <p>You assume all risks associated with skiing and outdoor activities.</p>
 
           <h3>6.4 User Responsibility</h3>
@@ -233,13 +232,13 @@ export default function TermsPage() {
           <h2>10. Disclaimers and Limitations</h2>
 
           <h3>10.1 Service &ldquo;AS IS&rdquo;</h3>
-          <p><strong>SKIMATE IS PROVIDED &ldquo;AS IS&rdquo; AND &ldquo;AS AVAILABLE&rdquo; WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED,</strong> including but not limited to merchantability, fitness for particular purpose, non-infringement, title, accuracy or reliability, and uninterrupted or error-free operation.</p>
+          <p><strong>ALPLINE IS PROVIDED &ldquo;AS IS&rdquo; AND &ldquo;AS AVAILABLE&rdquo; WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED,</strong> including but not limited to merchantability, fitness for particular purpose, non-infringement, title, accuracy or reliability, and uninterrupted or error-free operation.</p>
 
           <h3>10.2 No Guarantee of Accuracy</h3>
           <p>We do not warrant GPS accuracy or precision, map or trail information correctness, real-time data availability, weather forecast accuracy, resort information currency, performance metric precision, or route calculation accuracy.</p>
 
           <h3>10.3 Skiing Risks</h3>
-          <p><strong>YOU ACKNOWLEDGE THAT SKIING IS INHERENTLY DANGEROUS AND INVOLVES RISK OF</strong> serious injury or death, equipment failure, avalanches and natural hazards, weather-related dangers, collisions with objects or people, and terrain hazards. <strong>SKIMATE DOES NOT ELIMINATE THESE RISKS. YOU ASSUME ALL RISKS ASSOCIATED WITH SKIING.</strong></p>
+          <p><strong>YOU ACKNOWLEDGE THAT SKIING IS INHERENTLY DANGEROUS AND INVOLVES RISK OF</strong> serious injury or death, equipment failure, avalanches and natural hazards, weather-related dangers, collisions with objects or people, and terrain hazards. <strong>ALPLINE DOES NOT ELIMINATE THESE RISKS. YOU ASSUME ALL RISKS ASSOCIATED WITH SKIING.</strong></p>
 
           <h3>10.4 Technical Limitations</h3>
           <p>The Service may be subject to limitations and delays inherent to internet and mobile networks, GPS signal interference or inaccuracy, device compatibility issues, battery drain and performance impacts, security vulnerabilities, and third-party service dependencies.</p>
@@ -253,7 +252,7 @@ export default function TermsPage() {
           <h2>11. Limitation of Liability</h2>
 
           <h3>11.1 General Limitations</h3>
-          <p><strong>TO THE MAXIMUM EXTENT PERMITTED BY LAW, SKIMATE AND ITS AFFILIATES, OFFICERS, DIRECTORS, EMPLOYEES, AGENTS, AND LICENSORS SHALL NOT BE LIABLE FOR</strong> indirect, incidental, consequential, or punitive damages, loss of profits, revenue, or data, loss of use or business interruption, or cost of substitute services. Even if advised of the possibility of such damages.</p>
+          <p><strong>TO THE MAXIMUM EXTENT PERMITTED BY LAW, ALPLINE AND ITS AFFILIATES, OFFICERS, DIRECTORS, EMPLOYEES, AGENTS, AND LICENSORS SHALL NOT BE LIABLE FOR</strong> indirect, incidental, consequential, or punitive damages, loss of profits, revenue, or data, loss of use or business interruption, or cost of substitute services. Even if advised of the possibility of such damages.</p>
 
           <h3>11.2 Specific Activity Limitations</h3>
           <p>We are not liable for injuries or death resulting from skiing activities, accidents or collisions, getting lost or disoriented, avalanches or natural disasters, equipment failure, decisions made based on app information, emergency response failures or delays, or third-party acts or omissions.</p>
@@ -389,7 +388,7 @@ export default function TermsPage() {
           </p>
 
           <h2>18. Acknowledgment</h2>
-          <p><strong>BY USING SKIMATE, YOU ACKNOWLEDGE THAT:</strong></p>
+          <p><strong>BY USING ALPLINE, YOU ACKNOWLEDGE THAT:</strong></p>
           <ol>
             <li>You have read and understood these Terms</li>
             <li>You agree to be bound by these Terms</li>
@@ -400,16 +399,13 @@ export default function TermsPage() {
             <li>You will use the Service responsibly and lawfully</li>
             <li>You have the authority to enter into this agreement</li>
           </ol>
-          <p><strong>IF YOU DO NOT AGREE, DO NOT USE SKIMATE.</strong></p>
+          <p><strong>IF YOU DO NOT AGREE, DO NOT USE ALPLINE.</strong></p>
 
           <hr />
 
           <p><strong>These Terms of Service are effective as of February 19, 2026 and version 1.0.</strong></p>
           <p>For the most current version, please check within the app or visit our website.</p>
           <p>Thank you for using Alpline. Ski safe!</p>
-        </article>
-      </div>
-      <Footer />
-    </main>
+    </LegalDoc>
   );
 }
