@@ -37,6 +37,7 @@ export function QaCompare({
   pisteMap: PisteMapAsset | null;
 }) {
   const [mode, setMode] = useState<CompareMode>("side_by_side");
+  const overlayUrl = useRasterUrl(pisteMap?.url ?? null);
   const [opacity, setOpacity] = useState(0.55);
   const [nudge, setNudge] = useState({ x: 0, y: 0, scale: 1 });
   const mapRef = useRef<maptilersdk.Map | null>(null);
@@ -111,7 +112,7 @@ export function QaCompare({
   // scaled by hand because the sheet has no georeference of its own.
   useEffect(() => {
     const m = mapRef.current;
-    if (!m?.isStyleLoaded() || !pisteMap) return;
+    if (!m?.isStyleLoaded() || !pisteMap || !overlayUrl) return;
 
     const [w, s, e, n] = bbox;
     const cx = (w + e) / 2;
@@ -135,7 +136,7 @@ export function QaCompare({
     }
 
     if (!existing) {
-      m.addSource(OVERLAY, { type: "image", url: pisteMap.url, coordinates: coords });
+      m.addSource(OVERLAY, { type: "image", url: overlayUrl, coordinates: coords });
       m.addLayer(
         {
           id: "qa-overlay-layer",
@@ -150,7 +151,7 @@ export function QaCompare({
       m.setLayoutProperty("qa-overlay-layer", "visibility", "visible");
       m.setPaintProperty("qa-overlay-layer", "raster-opacity", opacity);
     }
-  }, [mode, opacity, nudge, bbox, pisteMap, ready]);
+  }, [mode, opacity, nudge, bbox, pisteMap, overlayUrl, ready]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -274,6 +275,49 @@ export function QaCompare({
       </div>
     </div>
   );
+}
+
+/**
+ * Gives MapLibre a raster it will actually draw.
+ *
+ * An `image` source decodes its URL through `createImageBitmap`, which does not
+ * reliably produce a usable bitmap from an SVG — the sheet renders perfectly in
+ * an `<img>` (which is why side-by-side worked) and silently draws nothing on
+ * the map. Painting it to a canvas first sidesteps that. Non-SVG sources, which
+ * is what real operator sheets will be, pass straight through untouched.
+ */
+function useRasterUrl(url: string | null): string | null {
+  const [out, setOut] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!url) {
+      setOut(null);
+      return;
+    }
+    if (!url.startsWith("data:image/svg+xml")) {
+      setOut(url);
+      return;
+    }
+
+    let cancelled = false;
+    const img = new Image();
+    img.onload = () => {
+      if (cancelled) return;
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth || 1000;
+      canvas.height = img.naturalHeight || 700;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      setOut(canvas.toDataURL("image/png"));
+    };
+    img.src = url;
+    return () => {
+      cancelled = true;
+    };
+  }, [url]);
+
+  return out;
 }
 
 /** Wheel to zoom, drag to pan. Enough to read run names off a sheet. */
