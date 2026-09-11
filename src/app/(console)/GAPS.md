@@ -8,7 +8,9 @@ work, so the backend can be built incrementally and the console flipped to
 > **Status 2026-09-11:** Phases 1–6 (all 23 endpoints) are **built** on
 > alpline-backend `feat/registry-stage0` (PR #68) and the console runs against
 > them for real (`INGESTION_API_MODE=real`, verified end to end in the
-> browser). Phase 7 below is the next unbuilt stage — specced, not started.
+> browser). Phase 7's backend (endpoints 24-26 + the sixth QA check) is on
+> alpline-backend main (PR #69); only its console screen remains — see
+> `alpline-admin/ROUTING-COVERAGE-CONSOLE-PROMPT.md`.
 
 The contract file is normative: the zod schemas are the payload definition, and
 the console's HTTP adapter validates every response against them, so a shape
@@ -116,7 +118,7 @@ open questions.
 | 22 | `POST /ingestion/registry/:registryId/runs` | Queue a run over named stages. Also used from the worklist. |
 | 23 | `GET /ingestion/runs/:runId` | One run in full. |
 
-### Phase 7 — Routing coverage (new screen 8) — specced 2026-09-11, not started
+### Phase 7 — Routing coverage (new screen 8) — backend BUILT 2026-09-11 (PR #69, alpline-backend main); screen pending
 
 Everything before this phase gets the *POI* layer to measured quality; the
 routing graph still only *asserts* coverage. The extraction is OSM-sourced —
