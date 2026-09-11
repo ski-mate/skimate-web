@@ -1,4 +1,8 @@
 -- Email signups table for Supabase
+-- Since 2026-09-11 this table is also created (IF NOT EXISTS, RLS enabled) by
+-- the backend's golden baseline migration — alpline-backend
+-- src/migrations/1760000000000-GoldenSchema.ts — so a database rebuild cannot
+-- drop it. This file remains the documented reference copy; keep both in sync.
 -- Apply via the Supabase dashboard SQL editor (or `supabase db push` / a CLI migration).
 
 CREATE TABLE IF NOT EXISTS email_signups (
