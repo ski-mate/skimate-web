@@ -15,6 +15,7 @@
 import type {
   AuditEntry,
   ConflictVerdictValue,
+  CoverageVerdictRecord,
   OnboardingManifest,
   RegistryEntry,
   SpendApproval,
@@ -44,6 +45,18 @@ interface Overlay {
   conflictVerdicts: Map<string, ConflictVerdictValue>;
   orphanResolutions: Map<string, OrphanResolution>;
   gateWaivers: Map<string, Waiver>;
+  /**
+   * Coverage gates are registry-scoped, not run-scoped, so their waivers key on
+   * `${registryId}:${gateKey}` rather than a run id — the same distinction the
+   * contract draws by giving them their own waive route.
+   */
+  coverageGateWaivers: Map<string, Waiver>;
+  /**
+   * Keyed `${registryId}:${findingId}`. Verdicts outlive graph rebuilds: the
+   * pipeline drops and rebuilds `ski_routing`, so a verdict stored against the
+   * graph would evaporate every re-extract.
+   */
+  coverageVerdicts: Map<string, CoverageVerdictRecord>;
   qaWaivers: Map<string, Waiver>;
   checklist: Map<string, ChecklistState>;
   approvals: Map<string, SpendApproval>;
@@ -63,6 +76,8 @@ export const overlay: Overlay =
     conflictVerdicts: new Map(),
     orphanResolutions: new Map(),
     gateWaivers: new Map(),
+    coverageGateWaivers: new Map(),
+    coverageVerdicts: new Map(),
     qaWaivers: new Map(),
     checklist: new Map(),
     approvals: new Map(),

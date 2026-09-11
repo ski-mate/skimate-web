@@ -9,6 +9,7 @@ import type {
   CandidateSearchQuery,
   CandidateSearchResponse,
   ConflictVerdictValue,
+  CoverageVerdictsRequest,
   GateKey,
   ManifestValidation,
   MembershipActionsRequest,
@@ -126,6 +127,43 @@ export async function publishRegistryEntry(
 ): Promise<PublishResponse> {
   const actor = await requireConsoleActor();
   const res = await getIngestionApi().publish(registryId, req, actor);
+  revalidateEntry(registryId);
+  return res;
+}
+
+/* ── Screen 8 — routing coverage ──────────────────────────────────────────── */
+
+export async function submitCoverageVerdicts(
+  registryId: string,
+  verdicts: CoverageVerdictsRequest["verdicts"]
+): Promise<VerdictsResponse> {
+  const actor = await requireConsoleActor();
+  // The contract makes a reason mandatory for accept_gap and the backend
+  // rejects it missing. Catching it here means the analyst sees "needs a
+  // reason" rather than a 400 from a route they never asked about.
+  for (const v of verdicts) {
+    if (v.verdict === "accept_gap" && !v.reason?.trim()) {
+      throw new Error("Accepting a coverage gap needs a reason.");
+    }
+  }
+  const res = await getIngestionApi().submitCoverageVerdicts(registryId, { verdicts }, actor);
+  revalidateEntry(registryId);
+  return res;
+}
+
+export async function waiveCoverageGate(
+  registryId: string,
+  key: GateKey,
+  reason: string
+): Promise<ValidationGate> {
+  const actor = await requireConsoleActor();
+  if (!reason.trim()) throw new Error("A waiver needs a reason.");
+  const res = await getIngestionApi().waiveCoverageGate(
+    registryId,
+    key,
+    { reason: reason.trim() },
+    actor
+  );
   revalidateEntry(registryId);
   return res;
 }

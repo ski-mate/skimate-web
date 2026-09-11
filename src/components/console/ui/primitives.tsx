@@ -75,8 +75,17 @@ const GATE_TONE: Record<GateStatus, { chip: string; label: string }> = {
   not_run: { chip: "bg-[var(--fill)] text-[var(--label-3)]", label: "Not run" },
 };
 
-export function GateChip({ status }: { status: GateStatus }) {
-  const t = GATE_TONE[status];
+/**
+ * `GateStatus` has no "warn" member — a gate either holds or it does not. What
+ * distinguishes a warning is `blocking: false`, so a non-blocking gate that
+ * fails is rendered as a warning rather than as "Blocking", which would be a
+ * lie about what it stops. `missing_difficulty` is the only one today.
+ */
+export function GateChip({ status, blocking = true }: { status: GateStatus; blocking?: boolean }) {
+  const t =
+    status === "fail" && !blocking
+      ? { chip: "bg-[var(--c-warn-bg)] text-[var(--c-warn)]", label: "Warn" }
+      : GATE_TONE[status];
   return (
     <span className={cn("inline-flex h-[19px] items-center rounded-sm px-1.5 text-[11px] font-medium", t.chip)}>
       {t.label}

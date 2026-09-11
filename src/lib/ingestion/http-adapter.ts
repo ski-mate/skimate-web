@@ -17,6 +17,7 @@ import { getConsoleSession } from "@/lib/console/auth";
 import {
   AuditListResponse,
   CandidateSearchResponse,
+  CoverageResponse,
   EnrichmentEstimate,
   EnrichmentReport,
   HarvestResponse,
@@ -204,6 +205,23 @@ export const httpIngestionApi: IngestionApi = {
 
   publish: (registryId, req, actor) =>
     call("publish", PublishResponse, { params: [registryId], body: req, actor }),
+
+  getCoverage: (registryId) =>
+    call("getCoverage", CoverageResponse, { params: [registryId] }),
+
+  submitCoverageVerdicts: (registryId, req, actor) =>
+    call("submitCoverageVerdicts", VerdictsResponse, {
+      params: [registryId],
+      body: req,
+      actor,
+    }),
+
+  waiveCoverageGate: (registryId, key, req, actor) =>
+    call("waiveCoverageGate", ValidationGate, {
+      params: [registryId, key],
+      body: req,
+      actor,
+    }),
 
   listRuns: (query) => call("listRuns", RunListResponse, { query }),
 

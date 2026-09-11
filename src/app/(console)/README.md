@@ -173,7 +173,13 @@ After the batch: match rate, actual cost, and an unmatched-POI queue
 
 Pre-publish. Automated checks run before you look — name collisions, unusual
 attribute combinations, count deltas against the previous run, dangling refs,
-missing geometry — so your attention goes to what a machine cannot judge.
+missing geometry, and **routing coverage signed off** — so your attention goes
+to what a machine cannot judge.
+
+The coverage check is the routing half of "is this entry complete": `warn`
+while the registry is unmeasured, `fail` while a blocking coverage gate fails
+unwaived, `pass` otherwise. It is resolved on screen 8, not here, so the
+worklist sends you straight there when it is the only thing left failing.
 
 Then the comparison against the resort's own piste map, in two modes:
 **side by side** for reading names and counting lifts, **overlay** with an
@@ -187,6 +193,53 @@ nothing can sit "waived but unpublished".
 
 > In mock mode the piste map is a generated schematic, labelled as such. Real
 > sheets come from `resort_piste_maps` once that endpoint exists.
+
+### 8. Routing coverage — `/console/resorts/{id}/coverage`
+
+Everything above this screen gets the **POI** layer to measured quality. The
+routing graph — the runs, lifts and connector edges the app actually routes
+over — only ever *asserted* coverage: the pipeline has been computing
+`connectivity_report` and `unconnected_lift_terminals` all along and nobody
+looked at them. This is the same review-queue-with-gates pattern applied to
+those diagnostics, plus a comparison against sources that are not us.
+
+The graph strip is the sanity check: routable km, edges, components, largest
+component, connector edges, and what share of piste km sits in a component that
+also contains a lift. Under it, the per-member census divides the graph between
+members — and what it *cannot* divide is the point. Les 3 Vallées attributes
+589 km of 770; the missing 180 km is extent no member polygon covers, which is
+the missing-leaf diagnosis the orphan belt gives from the POI side.
+
+Reference comparison runs in trust order. **liftie** is the star — it scrapes
+the operator's own status page, so a lift it names with no extracted
+counterpart is the strongest "we missed one" signal available, and each one is
+also a row in the queue. The other two report honestly rather than blankly:
+Skimap carries no countable lift or run totals, and where official declared
+counts should live is still open. A source that could not be compared leaves
+`reference_delta` **not run** rather than passing — a gate nothing checked has
+not held.
+
+Four gates, three blocking, one warn-only (`missing_difficulty`: routing
+degrades to an unknown grade rather than breaking). Waiving takes a reason and
+writes an audit row, same as the membership gates — it is literally the same
+card component.
+
+`f` fix upstream · `o` local override · `a` accept gap (reason required) ·
+`r` retry
+
+**No geometry editing here either.** `local_override` records a graph-repair
+decision — a connector edge, a tag — as our own evidence over OSM. It draws
+nothing. A genuinely missing run is `fix_upstream`, fixed in OSM where everyone
+downstream benefits; the console never edits OSM.
+
+The graph is rebuilt per database, so an entry the pipeline has not imported —
+production today, every fresh e2e database — returns `graphAvailable: false`
+and the screen says "no routing graph yet" rather than reporting zeros. That is
+a designed state, not an error.
+
+> Coverage does not appear on the worklist's stage ladder. It surfaces through
+> the **Coverage** tab count and through `coverage_signed_off`, the sixth
+> pre-publish check on screen 6.
 
 ### 7. Runs & audit — `/console/runs`
 
@@ -242,6 +295,7 @@ src/lib/console/auth.ts               session, allow-list, auth mode
 src/middleware.ts                     session refresh + the /console gate
 src/app/(console)/                    routes
 src/components/console/               screens and primitives
+src/components/console/ui/GateCard.tsx  one gate card, shared by screens 4 and 8
 src/styles/console.css                console density and status tokens
 ```
 

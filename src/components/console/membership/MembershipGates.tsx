@@ -4,13 +4,12 @@ import { useCallback, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import type {
   BBox,
-  GateKey,
   MembershipActionsRequest,
   MembershipResponse,
   OrphanPlace,
-  ValidationGate,
 } from "@/lib/ingestion-api";
-import { EmptyState, GateChip } from "@/components/console/ui/primitives";
+import { EmptyState } from "@/components/console/ui/primitives";
+import { GateCard } from "@/components/console/ui/GateCard";
 import { VirtualList } from "@/components/console/ui/VirtualList";
 import {
   ShortcutOverlay,
@@ -177,7 +176,11 @@ export function MembershipGates({
           </div>
           <div className="scroll-y max-h-[46vh] space-y-1.5 px-3 pb-3">
             {data.gates.map((g) => (
-              <GateCard key={g.key} gate={g} runId={data.runId} registryId={registryId} />
+              <GateCard
+                key={g.key}
+                gate={g}
+                onWaive={(reason) => waiveGate(data.runId, registryId, g.key, reason)}
+              />
             ))}
           </div>
         </div>
@@ -393,140 +396,6 @@ function ActionButton({
       </kbd>
       {label}
     </button>
-  );
-}
-
-function GateCard({
-  gate,
-  runId,
-  registryId,
-}: {
-  gate: ValidationGate;
-  runId: string;
-  registryId: string;
-}) {
-  const [waiving, setWaiving] = useState(false);
-  const [reason, setReason] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  const failing = gate.status === "fail";
-
-  // A gate that passes is not work. It collapses to one line so the gates that
-  // are actually blocking get the vertical space and are never scrolled out of
-  // sight behind a wall of green.
-  if (!failing) {
-    return (
-      <div className="flex items-center justify-between gap-2 rounded-sm border border-[var(--separator)] bg-[var(--bg)] px-2 py-1.5">
-        <span className="truncate text-[11px] text-[var(--label-2)]" title={gate.detail}>
-          {gate.title}
-        </span>
-        <span className="flex shrink-0 items-center gap-1.5">
-          {gate.waiver && (
-            <span
-              className="max-w-[150px] truncate text-[10px] text-[var(--c-waived)]"
-              title={`Waived by ${gate.waiver.actor}: ${gate.waiver.reason}`}
-            >
-              {gate.waiver.reason}
-            </span>
-          )}
-          <GateChip status={gate.status} />
-        </span>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className={cn(
-        "rounded-sm border p-2",
-        failing
-          ? "border-[var(--c-blocked)]/40 bg-[var(--c-blocked-bg)]"
-          : "border-[var(--separator)] bg-[var(--bg)]"
-      )}
-    >
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-[12px] font-medium">{gate.title}</h3>
-        <div className="flex items-center gap-1.5">
-          {gate.count > 0 && <span className="tabular text-[11px] text-[var(--label-3)]">{gate.count}</span>}
-          <GateChip status={gate.status} />
-        </div>
-      </div>
-
-      <p className="mt-1 text-[11px] leading-snug text-[var(--label-2)]">{gate.detail}</p>
-
-      {gate.evidence.length > 0 && (
-        <ul className="mt-1.5 space-y-0.5">
-          {gate.evidence.map((e) => (
-            <li key={e.id} className="truncate text-[10px] text-[var(--label-3)]">
-              <span className="font-medium text-[var(--label-2)]">{e.label}</span> — {e.detail}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {gate.waiver && (
-        <p className="mt-1.5 rounded-sm bg-[var(--c-waived-bg)] px-1.5 py-1 text-[10px] text-[var(--c-waived)]">
-          Waived by {gate.waiver.actor}: {gate.waiver.reason}
-        </p>
-      )}
-
-      {failing && !waiving && (
-        <button
-          type="button"
-          onClick={() => setWaiving(true)}
-          className="mt-1.5 text-[11px] text-[var(--label-3)] underline hover:text-[var(--label-2)]"
-        >
-          Waive this gate
-        </button>
-      )}
-
-      {waiving && (
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            if (!reason.trim()) return;
-            setBusy(true);
-            setErr(null);
-            try {
-              await waiveGate(runId, registryId, gate.key as GateKey, reason);
-              setWaiving(false);
-            } catch (error) {
-              setErr(error instanceof Error ? error.message : "Could not waive.");
-            } finally {
-              setBusy(false);
-            }
-          }}
-          className="mt-1.5 space-y-1"
-        >
-          <textarea
-            autoFocus
-            required
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            rows={2}
-            placeholder="Why is it correct to advance despite this gate? Recorded against your name."
-            className="w-full rounded-sm border border-[var(--separator)] bg-[var(--bg)] p-1.5 text-[11px] outline-none focus:border-[var(--link)]"
-          />
-          <div className="flex items-center gap-1.5">
-            <button
-              type="submit"
-              disabled={busy || !reason.trim()}
-              className="h-6 rounded-sm bg-[var(--c-waived)] px-2 text-[11px] font-medium text-white disabled:opacity-40"
-            >
-              {busy ? "Waiving…" : "Waive with reason"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setWaiving(false)}
-              className="h-6 rounded-sm border border-[var(--separator)] px-2 text-[11px]"
-            >
-              Cancel
-            </button>
-            {err && <span className="text-[10px] text-[var(--c-blocked)]">{err}</span>}
-          </div>
-        </form>
-      )}
-    </div>
   );
 }
 

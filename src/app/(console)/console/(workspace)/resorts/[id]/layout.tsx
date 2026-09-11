@@ -33,6 +33,17 @@ export default async function ResortLayout({
   const row = rows.find((r) => r.registryId === params.id);
   const base = `/console/resorts/${params.id}`;
 
+  // Coverage counts do not ride on the worklist row: `WorklistRow` is frozen
+  // and coverage is computed live, so the tab badge costs one extra bounded
+  // read. It must never take the page down with it — an entry with no graph is
+  // the normal case, and a coverage endpoint that is not deployed yet should
+  // cost a badge, not the screen.
+  const coverage = await api.getCoverage(params.id).catch(() => null);
+  const coverageOpen = coverage
+    ? coverage.findings.filter((f) => !f.verdict).length +
+      coverage.gates.filter((g) => g.status === "fail" && g.blocking).length
+    : 0;
+
   const tabs: ResortTab[] = [
     { href: `${base}/harvest`, label: "Harvest", count: row?.openConflicts, tone: "ready" },
     {
@@ -40,6 +51,15 @@ export default async function ResortLayout({
       label: "Membership & gates",
       count: (row?.gateFailures ?? 0) + (row?.orphanCount ?? 0),
       tone: (row?.gateFailures ?? 0) > 0 ? "blocked" : "warn",
+    },
+    {
+      href: `${base}/coverage`,
+      label: "Coverage",
+      count: coverageOpen,
+      tone:
+        coverage && coverage.gates.some((g) => g.status === "fail" && g.blocking)
+          ? "blocked"
+          : "warn",
     },
     { href: `${base}/enrichment`, label: "Enrichment" },
     { href: `${base}/qa`, label: "QA", count: row?.qaFailures, tone: "warn" },

@@ -5,12 +5,12 @@ running on a mock adapter. This file lists endpoints in the order they unblock
 work, so the backend can be built incrementally and the console flipped to
 `INGESTION_API_MODE=real` one screen at a time rather than all at once.
 
-> **Status 2026-09-11:** Phases 1–6 (all 23 endpoints) are **built** on
-> alpline-backend `feat/registry-stage0` (PR #68) and the console runs against
-> them for real (`INGESTION_API_MODE=real`, verified end to end in the
-> browser). Phase 7's backend (endpoints 24-26 + the sixth QA check) is on
-> alpline-backend main (PR #69); only its console screen remains — see
-> `alpline-admin/ROUTING-COVERAGE-CONSOLE-PROMPT.md`.
+> **Status 2026-09-11:** All 26 endpoints across phases 1–7 are **built** on
+> alpline-backend and the console runs against them for real
+> (`INGESTION_API_MODE=real`). Phase 7's screen 8 is built and verified against
+> the live backend: the report renders, verdicts and gate waivers round-trip
+> with audit rows, and `coverage_signed_off` comes back as the sixth QA check.
+> Nothing in this file is outstanding except the open questions below.
 
 The contract file is normative: the zod schemas are the payload definition, and
 the console's HTTP adapter validates every response against them, so a shape
@@ -118,7 +118,7 @@ open questions.
 | 22 | `POST /ingestion/registry/:registryId/runs` | Queue a run over named stages. Also used from the worklist. |
 | 23 | `GET /ingestion/runs/:runId` | One run in full. |
 
-### Phase 7 — Routing coverage (new screen 8) — backend BUILT 2026-09-11 (PR #69, alpline-backend main); screen pending
+### Phase 7 — Routing coverage (screen 8) — BUILT 2026-09-11 (backend PR #69; console screen verified against it the same day)
 
 Everything before this phase gets the *POI* layer to measured quality; the
 routing graph still only *asserts* coverage. The extraction is OSM-sourced —
@@ -213,6 +213,18 @@ returns, but the shape assumes an answer exists.
     re-harvest (the pipeline drops and rebuilds `ski_routing`). Proposed: an
     `routing_overrides` table in `public` (golden baseline), applied as a final
     pipeline step — mirrors how verdicts persist in `places.attrs` across runs.
+11. **(Phase 7) Does every verdict settle its gate?** Observed behaviour, not a
+    proposal: the shipped backend decrements a coverage gate on **any** verdict
+    — a `fix_upstream` took `disconnected_terminal` from 11 to 10 against the
+    local stack on 2026-09-11. Arguably it should not. `fix_upstream` and
+    `retry` both mean "still broken, the fix is elsewhere", so a gate that goes
+    green the moment someone files an OSM note is measuring intent rather than
+    the graph; only `local_override` (we repaired it) and `accept_gap` (it is
+    correct as-is) are claims about the graph itself. The console follows
+    whatever the API returns and its mock adapter mirrors the current rule
+    exactly, so this is a backend decision with no console work either way —
+    but the mock carries a comment pointing here, and the screen deliberately
+    says what each verdict *records* rather than what it does to the gate.
 
 ## Notes on things that are deliberately *not* in the contract
 

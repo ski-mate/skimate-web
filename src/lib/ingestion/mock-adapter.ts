@@ -13,6 +13,9 @@ import type {
   BulkAcceptRequest,
   CandidateSearchQuery,
   CandidateSearchResponse,
+  CoverageFinding,
+  CoverageResponse,
+  CoverageVerdictsRequest,
   EnrichmentEstimate,
   EnrichmentReport,
   GateKey,
@@ -47,6 +50,9 @@ import type {
 } from "@/lib/ingestion-api";
 import {
   buildChecklist,
+  buildCoverage,
+  buildCoverageGates,
+  buildCoverageQaCheck,
   buildEnrichmentEstimate,
   buildEnrichmentReport,
   buildHarvest,
@@ -152,8 +158,50 @@ function gateFailures(b: BuiltEntry): number {
     .length;
 }
 
+/**
+ * The coverage report, computed live from the fixtures plus the analyst's
+ * verdicts and waivers — never snapshotted, matching the contract's rule for
+ * this endpoint. Gates are derived from the findings after verdicts are applied
+ * rather than stored, so the panel can never disagree with the queue beside it.
+ */
+function coverageFor(b: BuiltEntry): CoverageResponse {
+  const base = buildCoverage(b, membersOf(b));
+
+  const findings: CoverageFinding[] = base.findings.map((f) => ({
+    ...f,
+    verdict: overlay.coverageVerdicts.get(`${b.entry.id}:${f.id}`) ?? null,
+  }));
+
+  const referenceComparable = base.reference.some((ref) => ref.status === "ok");
+  const gates = buildCoverageGates(findings, base.graphAvailable, referenceComparable).map((g) => {
+    const waiver = overlay.coverageGateWaivers.get(`${b.entry.id}:${g.key}`) ?? null;
+    if (waiver && g.status === "fail") return { ...g, status: "waived" as const, waiver };
+    return { ...g, waiver };
+  });
+
+  return {
+    ...base,
+    // Unresolved first: the queue is the screen, and a reviewed finding is
+    // history rather than work.
+    findings: [...findings].sort(
+      (x, y) => Number(Boolean(x.verdict)) - Number(Boolean(y.verdict))
+    ),
+    gates,
+  };
+}
+
 function qaChecksFor(b: BuiltEntry) {
-  return buildQaChecks(b).map((c) => {
+  const coverage = coverageFor(b);
+  const checks = [
+    ...buildQaChecks(b),
+    buildCoverageQaCheck(
+      b.entry.id,
+      coverage.graphAvailable,
+      coverage.gates,
+      coverage.findings.filter((f) => !f.verdict).length
+    ),
+  ];
+  return checks.map((c) => {
     const w = overlay.qaWaivers.get(c.id);
     return w ? { ...c, status: "waived" as const, waiver: w } : c;
   });
@@ -228,10 +276,18 @@ function nextActionFor(b: BuiltEntry): NextAction {
         : mk("Open QA workspace", `/console/resorts/${id}/qa`, "ready");
     }
     case "qa": {
-      const failing = qaChecksFor(b).filter((c) => c.status === "fail").length;
-      return failing > 0
-        ? mk(`Resolve ${failing} QA checks`, `/console/resorts/${id}/qa`, "blocked", 600 + failing * 10)
-        : mk("Publish", `/console/resorts/${id}/qa`, "ready");
+      const failing = qaChecksFor(b).filter((c) => c.status === "fail");
+      if (failing.length === 0) return mk("Publish", `/console/resorts/${id}/qa`, "ready");
+      // Coverage is a QA check but it is not resolved on the QA screen — send
+      // the analyst where the work actually is when it is the only thing left.
+      const onlyCoverage =
+        failing.length === 1 && failing[0].key === "coverage_signed_off";
+      return mk(
+        onlyCoverage ? "Clear routing coverage gates" : `Resolve ${failing.length} QA checks`,
+        `/console/resorts/${id}/${onlyCoverage ? "coverage" : "qa"}`,
+        "blocked",
+        600 + failing.length * 10
+      );
     }
     case "needs_rerun":
       return mk("Re-run — upstream data moved", `/console/resorts/${id}/harvest`, "blocked", 700);
@@ -962,6 +1018,90 @@ export const mockIngestionApi: IngestionApi = {
     });
 
     return { published: true, publishedAt: state.publishedAt, version: state.version, blockedBy: [] };
+  },
+
+  async getCoverage(registryId: string): Promise<CoverageResponse> {
+    const b = byId(registryId);
+    if (!b) throw new Error(`Unknown registry entry ${registryId}`);
+    return coverageFor(b);
+  },
+
+  async submitCoverageVerdicts(
+    registryId: string,
+    req: CoverageVerdictsRequest,
+    actor: Actor
+  ): Promise<VerdictsResponse> {
+    const b = byId(registryId);
+    if (!b) throw new Error(`Unknown registry entry ${registryId}`);
+
+    const known = new Map(coverageFor(b).findings.map((f) => [f.id, f]));
+    const auditIds: string[] = [];
+    const at = new Date().toISOString();
+
+    for (const v of req.verdicts) {
+      const finding = known.get(v.findingId);
+      if (!finding) throw new Error(`Unknown coverage finding ${v.findingId}`);
+      // The contract says the backend rejects accept_gap without a reason, so
+      // the mock rejects it too. A mock that is more permissive than the real
+      // thing teaches the console the wrong lesson.
+      if (v.verdict === "accept_gap" && !v.reason?.trim()) {
+        throw new Error("Accepting a coverage gap needs a reason.");
+      }
+
+      overlay.coverageVerdicts.set(`${registryId}:${v.findingId}`, {
+        value: v.verdict,
+        reason: v.reason?.trim() || null,
+        actor: actor.email,
+        at,
+      });
+
+      auditIds.push(
+        recordAudit({
+          actor: actor.email,
+          action: `coverage.${v.verdict}`,
+          registryId,
+          target: finding.label,
+          detail:
+            v.verdict === "local_override"
+              ? `Recorded a graph repair over OSM for “${finding.label}”. Stores a connector or tag override — no geometry is drawn.`
+              : v.verdict === "fix_upstream"
+                ? `Flagged “${finding.label}” as a genuine gap belonging in OSM. Re-checked after the next extract.`
+                : v.verdict === "accept_gap"
+                  ? `Accepted the gap at “${finding.label}” as correct.`
+                  : `Queued “${finding.label}” for re-check after an upstream fix.`,
+          reason: v.reason?.trim() || null,
+        }).id
+      );
+    }
+
+    return {
+      applied: req.verdicts.length,
+      remaining: coverageFor(b).findings.filter((f) => !f.verdict).length,
+      auditIds,
+    };
+  },
+
+  async waiveCoverageGate(
+    registryId: string,
+    key: GateKey,
+    req: WaiveGateRequest,
+    actor: Actor
+  ): Promise<ValidationGate> {
+    const b = byId(registryId);
+    if (!b) throw new Error(`Unknown registry entry ${registryId}`);
+    const waiver = { reason: req.reason, actor: actor.email, at: new Date().toISOString() };
+    overlay.coverageGateWaivers.set(`${registryId}:${key}`, waiver);
+    recordAudit({
+      actor: actor.email,
+      action: "coverage_gate.waive",
+      registryId,
+      target: key,
+      detail: `Waived the ${key.replace(/_/g, " ")} coverage gate so the entry can be published.`,
+      reason: req.reason,
+    });
+    const gate = coverageFor(b).gates.find((g) => g.key === key);
+    if (!gate) throw new Error(`Unknown coverage gate ${key}`);
+    return gate;
   },
 
   async listRuns(query: Partial<RunListQuery>): Promise<RunListResponse> {

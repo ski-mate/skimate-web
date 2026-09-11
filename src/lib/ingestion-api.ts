@@ -551,12 +551,22 @@ export const OrphanPlace = z.object({
 });
 export type OrphanPlace = z.infer<typeof OrphanPlace>;
 
-/** The four validation gates from §3.4 of the pipeline spec. */
+/**
+ * Validation gates. The first four are the membership gates from §3.4 of the
+ * pipeline spec; the last four are routing-coverage gates (screen 8) and are
+ * registry-scoped rather than run-scoped, which is why they waive through their
+ * own route. One enum rather than two because a gate is a gate: same status
+ * model, same waiver record, same "blocking" semantics, same card.
+ */
 export const GateKey = z.enum([
   "orphan_belt",
   "empty_member",
   "duplicate_claim",
   "downhill_without_lift",
+  "disconnected_terminal",
+  "isolated_component",
+  "reference_delta",
+  "missing_difficulty",
 ]);
 export type GateKey = z.infer<typeof GateKey>;
 
@@ -721,6 +731,13 @@ export const QaCheckKey = z.enum([
   "count_delta",
   "dangling_ref",
   "missing_geometry",
+  /**
+   * The routing half of the same question. Blocking: `warn` while the registry
+   * is unmeasured (no graph on this database), `fail` while a blocking coverage
+   * gate fails unwaived, `pass` otherwise. `piste_map_compared` in the human
+   * checklist remains the eyeball half.
+   */
+  "coverage_signed_off",
 ]);
 export type QaCheckKey = z.infer<typeof QaCheckKey>;
 
@@ -805,16 +822,181 @@ export const PublishResponse = z.object({
 export type PublishResponse = z.infer<typeof PublishResponse>;
 
 /* ========================================================================== *
- *  10. Screen 7 — Runs and audit (`ingestion_runs` rendered)
+ *  10. Screen 8 — Routing coverage (Stage `routing`)
+ * ========================================================================== *
+ *
+ * Every stage above this one gets the *POI* layer to measured quality. The
+ * routing graph — the runs, lifts and connector edges the mobile app actually
+ * routes over — only ever *asserted* coverage: the pipeline already computed
+ * `ski_routing.connectivity_report` and `ski_routing.unconnected_lift_terminals`
+ * and nobody ever looked at them.
+ *
+ * This section turns those diagnostics, plus a comparison against
+ * operator-authoritative references, into the same reviewed / gated / audited
+ * shape as every other stage.
+ *
+ * Two properties shape every schema here:
+ *
+ *  - **Computed live, never snapshotted.** The report is derived from the
+ *    current graph on every read, so it cannot go stale behind a run artefact.
+ *    That is also why these routes are registry-scoped like QA rather than
+ *    run-scoped: routing-stage runs do not exist until the pipeline grows the
+ *    stage, and the graph is regenerated per database.
+ *  - **`graphAvailable: false` is a designed state, not an error.** On a
+ *    database the routing pipeline has not populated — production today, every
+ *    fresh e2e database — the report returns zeroed stats and `not_run` gates.
+ *    The console renders that as "no routing graph yet", the same way the
+ *    membership screen renders a missing run.
+ */
+
+/**
+ * What the analyst can decide about a coverage finding.
+ *
+ * `local_override` is the one that needs guarding: it records a *graph repair*
+ * decision — a connector edge, a tag override — as our own evidence over OSM.
+ * It never draws geometry. A genuinely missing run is `fix_upstream`, fixed in
+ * OSM where everyone downstream benefits. Hand-tracing is the thing Slopes does
+ * that we specifically do not.
+ */
+export const CoverageVerdictValue = z.enum([
+  "fix_upstream",     // real gap, belongs in OSM; recorded, re-checked after re-extract
+  "local_override",   // graph repair (connector/tag) recorded as our evidence — never traced geometry
+  "accept_gap",       // reason mandatory — e.g. a decommissioned lift the feed still lists
+  "retry",            // re-check after an upstream fix landed
+]);
+export type CoverageVerdictValue = z.infer<typeof CoverageVerdictValue>;
+
+export const CoverageFindingType = z.enum([
+  "unconnected_terminal",   // a lift terminal not joined into the routable graph
+  "isolated_component",     // a piste cluster ≥ the km floor with no lift edge
+  "missing_difficulty",     // piste way with piste:type but no difficulty tag
+  "missing_reference_lift", // liftie (operator feed) lists a lift OSM extraction lacks
+]);
+export type CoverageFindingType = z.infer<typeof CoverageFindingType>;
+
+export const CoverageVerdictRecord = z.object({
+  value: CoverageVerdictValue,
+  reason: z.string().nullable(),
+  actor: z.string().email(),
+  at: Instant,
+});
+export type CoverageVerdictRecord = z.infer<typeof CoverageVerdictRecord>;
+
+export const CoverageFinding = z.object({
+  /** Stable across recomputation — verdicts key on it. e.g. "terminal:123:456". */
+  id: z.string(),
+  type: CoverageFindingType,
+  label: z.string(),
+  detail: z.string(),
+  point: LngLat.nullable(),
+  memberId: z.string().uuid().nullable(),
+  memberName: z.string().nullable(),
+  /** Piste km for isolated components; null elsewhere. */
+  km: z.number().nonnegative().nullable(),
+  verdict: CoverageVerdictRecord.nullable(),
+});
+export type CoverageFinding = z.infer<typeof CoverageFinding>;
+
+export const CoverageMemberStats = z.object({
+  resortId: z.string().uuid(),
+  name: z.string(),
+  colorIndex: z.number().int().nonnegative(),
+  /** False when the member has no OSM polygon to scope edges by — stats then sit in the group-level row only. */
+  attributed: z.boolean(),
+  pisteKm: z.number().nonnegative(),
+  liftCount: z.number().int().nonnegative(),
+  namedRunCount: z.number().int().nonnegative(),
+  runsByDifficulty: z.record(z.string(), z.number().int().nonnegative()),
+  liftsByType: z.record(z.string(), z.number().int().nonnegative()),
+});
+export type CoverageMemberStats = z.infer<typeof CoverageMemberStats>;
+
+/**
+ * A comparison against a source that is not us. `liftie` is the strongest of
+ * the three — it scrapes the operator's own status page, so a lift it lists
+ * with no OSM counterpart is the single best "we missed one" signal we have.
+ */
+export const ReferenceComparison = z.object({
+  source: z.enum(["liftie", "skimap", "declared"]),
+  status: z.enum(["ok", "unavailable"]),
+  /** Why unavailable, or what was compared. "Feed live but no lift list published (out of season)" is a real state — render it, don't hide it. */
+  detail: z.string(),
+  lifts: z
+    .object({
+      referenceCount: z.number().int().nonnegative(),
+      extractedCount: z.number().int().nonnegative(),
+      matchedCount: z.number().int().nonnegative(),
+      missing: z.array(z.string()),
+      extraCount: z.number().int().nonnegative(),
+    })
+    .nullable(),
+  runs: z
+    .object({
+      referenceCount: z.number().int().nullable(),
+      extractedCount: z.number().int().nonnegative(),
+      deltaPct: z.number().nullable(),
+    })
+    .nullable(),
+});
+export type ReferenceComparison = z.infer<typeof ReferenceComparison>;
+
+export const CoverageResponse = z.object({
+  registryId: z.string().uuid(),
+  registryName: z.string(),
+  computedAt: Instant,
+  /** False until the routing pipeline has populated ski_routing on this database. */
+  graphAvailable: z.boolean(),
+  graph: z.object({
+    edges: z.number().int().nonnegative(),
+    components: z.number().int().nonnegative(),
+    largestComponentPct: z.number().nullable(),
+    routableKm: z.number().nonnegative(),
+    connectorEdges: z.number().int().nonnegative(),
+    /** % of piste km in a component that also contains a lift edge. */
+    reachablePistePct: z.number().nullable(),
+  }),
+  members: z.array(CoverageMemberStats),
+  reference: z.array(ReferenceComparison),
+  /** Capped server-side; unresolved first. */
+  findings: z.array(CoverageFinding),
+  /** Reuses ValidationGate; keys are the four coverage GateKeys. */
+  gates: z.array(ValidationGate),
+});
+export type CoverageResponse = z.infer<typeof CoverageResponse>;
+
+export const CoverageVerdictsRequest = z.object({
+  verdicts: z.array(
+    z.object({
+      findingId: z.string(),
+      verdict: CoverageVerdictValue,
+      /** Mandatory for accept_gap; the backend rejects it missing. */
+      reason: z.string().nullish(),
+    })
+  ),
+});
+export type CoverageVerdictsRequest = z.infer<typeof CoverageVerdictsRequest>;
+
+/* ========================================================================== *
+ *  11. Screen 7 — Runs and audit (`ingestion_runs` rendered)
  * ========================================================================== */
 
 export const RunStatus = z.enum(["queued", "running", "succeeded", "failed", "cancelled"]);
 export type RunStatus = z.infer<typeof RunStatus>;
 
+/**
+ * A pipeline stage a run can execute. `routing` and `enrichment` are
+ * order-independent — one builds the graph, the other fills the POI layer — but
+ * both must be green before `publish`.
+ *
+ * Note this is not the worklist's `Stage`: that enum is the entry's *progress*
+ * axis and is deliberately unchanged. Coverage surfaces through the QA check
+ * and the coverage tab, not by growing the progress ladder.
+ */
 export const StageKey = z.enum([
   "identity",
   "harvest",
   "membership",
+  "routing",
   "enrichment",
   "publish",
 ]);
@@ -925,7 +1107,7 @@ export const TriggerRunResponse = z.object({
 export type TriggerRunResponse = z.infer<typeof TriggerRunResponse>;
 
 /* ========================================================================== *
- *  11. The client interface
+ *  12. The client interface
  * ========================================================================== */
 
 /**
@@ -992,6 +1174,22 @@ export interface IngestionApi {
   getQaWorkspace(registryId: string): Promise<QaWorkspaceResponse>;
   publish(registryId: string, req: PublishRequest, actor: Actor): Promise<PublishResponse>;
 
+  // Screen 8 — registry-scoped like QA: coverage is computed live from the
+  // current graph, and routing-stage runs do not exist until the pipeline
+  // grows the stage.
+  getCoverage(registryId: string): Promise<CoverageResponse>;
+  submitCoverageVerdicts(
+    registryId: string,
+    req: CoverageVerdictsRequest,
+    actor: Actor
+  ): Promise<VerdictsResponse>;
+  waiveCoverageGate(
+    registryId: string,
+    key: GateKey,
+    req: WaiveGateRequest,
+    actor: Actor
+  ): Promise<ValidationGate>;
+
   // Screen 7
   listRuns(query: Partial<RunListQuery>): Promise<RunListResponse>;
   getRun(runId: string): Promise<IngestionRun | null>;
@@ -1007,7 +1205,7 @@ export interface IngestionApi {
 }
 
 /* ========================================================================== *
- *  12. Route table
+ *  13. Route table
  * ========================================================================== *
  *
  * The HTTP adapter builds its URLs from this, and GAPS.md is derived from it,
@@ -1145,6 +1343,27 @@ export const ROUTES = {
     screen: "6 — QA workspace",
     summary:
       "Publish, applying any check waivers atomically. Refuses and returns blockedBy when a check still fails unwaived.",
+  },
+  getCoverage: {
+    method: "GET",
+    path: "/ingestion/registry/:registryId/coverage",
+    screen: "8 — Routing coverage",
+    summary:
+      "The coverage report, computed live from the current graph: connectivity stats, per-member census, reference comparison and the findings queue. Never snapshotted.",
+  },
+  submitCoverageVerdicts: {
+    method: "POST",
+    path: "/ingestion/registry/:registryId/coverage/verdicts",
+    screen: "8 — Routing coverage",
+    summary:
+      "Apply a batch of fix_upstream / local_override / accept_gap / retry verdicts. Idempotent per finding id, one audit row each.",
+  },
+  waiveCoverageGate: {
+    method: "POST",
+    path: "/ingestion/registry/:registryId/coverage/gates/:gateKey/waive",
+    screen: "8 — Routing coverage",
+    summary:
+      "Waive a coverage gate with a mandatory reason. Registry-scoped, because coverage gates are registry-scoped state; the run-scoped waive stays membership-only.",
   },
   listRuns: {
     method: "GET",

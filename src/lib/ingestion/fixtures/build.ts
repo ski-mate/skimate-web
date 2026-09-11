@@ -13,6 +13,9 @@
 
 import type {
   ChecklistItem,
+  CoverageFinding,
+  CoverageMemberStats,
+  CoverageResponse,
   EnrichmentEstimate,
   EnrichmentReport,
   GateKey,
@@ -23,6 +26,7 @@ import type {
   MembershipResponse,
   PlaceCandidate,
   QaCheck,
+  ReferenceComparison,
   RegistryEntry,
   RunStage,
   Stage,
@@ -1173,4 +1177,538 @@ export function buildPisteMapSvg(name: string, seed: string): string {
     ""
   )}</svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+/* ── routing coverage (screen 8) ──────────────────────────────────────────── */
+
+/**
+ * Coverage fixtures.
+ *
+ * Modelled on Les 3 Vallées as the pipeline actually reports it: ~770 routable
+ * km over 18 components with one dominant component, ~1.1k connector edges, a
+ * handful of lift terminals that never joined the graph, and one small piste
+ * cluster with no lift serving it.
+ *
+ * The number that tells the real story is the gap between the graph's routable
+ * km and the km the census can attribute to a member: the three biggest leaves
+ * (Courchevel, Méribel, Les Menuires) have no polygon and therefore no registry
+ * entry, so most of the domain's piste km belongs to no member row. That is the
+ * same missing-leaf diagnosis the orphan belt gives on screen 4, seen from the
+ * graph instead of from the POIs.
+ */
+
+/** OSM `piste:difficulty` values, in the order a trail map prints them. */
+const DIFFICULTY_ORDER = ["novice", "easy", "intermediate", "advanced", "expert"] as const;
+
+/** OSM `aerialway` / `railway=funicular` values, commonest first. */
+const LIFT_TYPE_ORDER = ["chair_lift", "gondola", "drag_lift", "t-bar", "cable_car", "magic_carpet"] as const;
+
+/**
+ * Operator lift names as a liftie-style feed publishes them. Real Trois Vallées
+ * names, because the whole point of the liftie comparison is matching against
+ * what the operator calls its own lifts.
+ */
+const LIFT_NAMES = [
+  "Cime Caron", "Funitel Grand Fond", "Plein Sud", "Moutière", "Péclet",
+  "Cascades", "Bouquetin", "Pionniers", "Rosaël", "Trois Vallées",
+  "Bouchet", "Portette", "Boismint", "Plan de l'Eau", "Cairn",
+  "Deux Lacs", "Gentianes", "Col", "Thorens", "Grand Fond",
+  "Saulire Express", "Roc Merlet", "Ariondaz", "Aiguille du Fruit",
+] as const;
+
+/** Pinned so the flagship domain reads like the pipeline's own report. */
+const PINNED_GRAPH: Record<
+  string,
+  { edges: number; components: number; largestComponentPct: number; routableKm: number; connectorEdges: number; reachablePistePct: number }
+> = {
+  "Les 3 Vallées": {
+    edges: 21_438,
+    components: 18,
+    largestComponentPct: 98.3,
+    routableKm: 770.4,
+    connectorEdges: 1_104,
+    reachablePistePct: 97.1,
+  },
+};
+
+/**
+ * Share of the graph's routable km that member polygons can account for.
+ * Les 3 Vallées is pinned low on purpose: three of its leaves do not exist.
+ */
+const ATTRIBUTED_FRACTION: Record<string, number> = {
+  "Les 3 Vallées": 0.21,
+};
+
+/** Liftie lifts with no OSM counterpart — the strongest "we missed one" signal. */
+const PINNED_MISSING_LIFTS: Record<string, string[]> = {
+  "Les 3 Vallées": ["Roc Merlet", "Ariondaz", "Aiguille du Fruit"],
+};
+
+/** The findings cap the backend applies. Rendered as "showing N of M". */
+export const COVERAGE_FINDING_CAP = 60;
+
+/**
+ * Which verdicts settle a gate.
+ *
+ * All four, matching the shipped backend: a reviewed finding stops counting
+ * against its gate whatever the verdict was. Verified against alpline-backend
+ * on 2026-09-11 — a `fix_upstream` verdict took `disconnected_terminal` from
+ * 11 to 10 there, so the mock does the same.
+ *
+ * It is arguably the wrong rule. `fix_upstream` and `retry` both mean "still
+ * broken, the fix is elsewhere", so a gate that goes green the moment someone
+ * files an OSM note is measuring intent rather than the graph. That is a
+ * backend decision, not a console one, and it is raised as open question 11 in
+ * GAPS.md rather than settled differently here — a mock that disagreed with
+ * the real thing would teach the console the wrong lesson.
+ */
+export const SETTLING_VERDICTS: ReadonlySet<string> = new Set([
+  "local_override",
+  "accept_gap",
+  "fix_upstream",
+  "retry",
+]);
+
+function distribute(total: number, keys: readonly string[], r: () => number): Record<string, number> {
+  const out: Record<string, number> = {};
+  let left = total;
+  keys.forEach((k, i) => {
+    const share = i === keys.length - 1 ? left : Math.round(left * (0.2 + r() * 0.45));
+    out[k] = Math.max(0, Math.min(left, share));
+    left -= out[k];
+  });
+  return out;
+}
+
+/**
+ * Per-member census.
+ *
+ * Member km are a *share of the graph's routable km*, never an independent
+ * number: the census exists to say how the measured graph divides between
+ * members, and a census that sums to more than the graph it describes would be
+ * worse than no census. What it does not sum to is the point — the shortfall is
+ * domain covered by no member polygon.
+ */
+function buildCoverageMembers(
+  built: BuiltEntry,
+  memberEntries: RegistryEntry[],
+  routableKm: number
+): CoverageMemberStats[] {
+  const roster = memberEntries.length ? memberEntries : [built.entry];
+
+  // No polygon means nothing to scope graph edges by. Reporting zeros would
+  // read as "this member has no pistes"; it has no *attribution*, which is a
+  // different and more actionable statement.
+  const weights = roster.map((m) =>
+    m.osmIds.length > 0 ? 0.4 + rng(`coverage:weight:${m.id}`)() : 0
+  );
+  const totalWeight = weights.reduce((n, w) => n + w, 0) || 1;
+
+  // How much of the extent the member polygons actually cover. A leaf is its
+  // own extent. Les 3 Vallées is pinned low because its three biggest leaves —
+  // Courchevel, Méribel, Les Menuires — have no polygon and therefore no
+  // registry entry: the same missing-leaf diagnosis as the orphan belt, seen
+  // from the graph.
+  const attributedFraction =
+    ATTRIBUTED_FRACTION[built.entry.name] ??
+    (built.entry.kind === "group" ? 0.62 + rng(`coverage:frac:${built.entry.id}`)() * 0.33 : 0.96);
+
+  return roster.map((m, i) => {
+    const mr = rng(`coverage:member:${m.id}`);
+    const attributed = weights[i] > 0;
+    const pisteKm = attributed
+      ? Math.round(routableKm * attributedFraction * (weights[i] / totalWeight) * 10) / 10
+      : 0;
+    // Roughly one lift per 9 km of piste, which is the density a real domain
+    // runs at; a census that puts 3 lifts against 100 km reads as broken data.
+    const liftCount = attributed ? Math.max(1, Math.round(pisteKm / 9) + int(mr, -1, 2)) : 0;
+    const namedRunCount = attributed ? Math.max(1, Math.round(pisteKm / 1.7) + int(mr, -4, 4)) : 0;
+    return {
+      resortId: m.id,
+      name: m.name,
+      colorIndex: i,
+      attributed,
+      pisteKm,
+      liftCount,
+      namedRunCount,
+      runsByDifficulty: attributed ? distribute(namedRunCount, DIFFICULTY_ORDER, mr) : {},
+      liftsByType: attributed ? distribute(liftCount, LIFT_TYPE_ORDER, mr) : {},
+    };
+  });
+}
+
+export function buildCoverage(
+  built: BuiltEntry,
+  memberEntries: RegistryEntry[]
+): Omit<CoverageResponse, "gates"> {
+  const { entry } = built;
+  const r = rng(`coverage:${entry.id}`);
+
+  // The graph exists only once the pipeline has extracted the region. Before
+  // that — production today, every fresh e2e database — there is nothing to
+  // measure, and saying so is more useful than reporting zeros as findings.
+  const graphAvailable = stageIndex(built.stage) >= 2;
+
+  if (!graphAvailable) {
+    return {
+      registryId: entry.id,
+      registryName: entry.name,
+      computedAt: iso(0),
+      graphAvailable: false,
+      graph: {
+        edges: 0,
+        components: 0,
+        largestComponentPct: null,
+        routableKm: 0,
+        connectorEdges: 0,
+        reachablePistePct: null,
+      },
+      members: [],
+      reference: [],
+      findings: [],
+    };
+  }
+
+  const pinned = PINNED_GRAPH[entry.name];
+  const graph = pinned ?? {
+    edges: built.trails * 26 + built.lifts * 9 + int(r, 40, 600),
+    components: Math.max(1, Math.round(built.trails / 42) + int(r, 0, 3)),
+    largestComponentPct: Math.round((100 - r() * 7) * 10) / 10,
+    routableKm: Math.round(Math.max(4, built.trails * 1.9) * 10) / 10,
+    connectorEdges: built.lifts * 7 + int(r, 0, 40),
+    reachablePistePct: Math.round((100 - r() * 9) * 10) / 10,
+  };
+
+  const members = buildCoverageMembers(built, memberEntries, graph.routableKm);
+  const attributedMembers = members.filter((m) => m.attributed);
+  // Domain-wide, not the member sum: the reference feed lists the operator's
+  // whole lift estate, and attribution is a separate question. Comparing a
+  // domain count against a member-attributed subtotal would manufacture a
+  // delta out of the missing leaves.
+  const extractedLifts = Math.max(
+    built.lifts,
+    members.reduce((n, m) => n + m.liftCount, 0)
+  );
+
+  /* ── reference comparison ───────────────────────────────────────────────── */
+
+  // Rotated from a per-entry offset rather than sliced from the top, so the
+  // flagship domain's lift names do not turn up at every other resort.
+  const nameOffset = int(rng(`liftnames:${entry.id}`), 0, LIFT_NAMES.length - 1);
+  const missingLifts =
+    PINNED_MISSING_LIFTS[entry.name] ??
+    (r() > 0.55
+      ? Array.from(
+          { length: int(r, 1, 2) },
+          (_, i) => LIFT_NAMES[(nameOffset + i) % LIFT_NAMES.length]
+        )
+      : []);
+
+  // liftie covers 201 resorts in production, so plenty of entries have no
+  // mapping at all — and a mapped resort out of season publishes a live feed
+  // with no lift list. Both are real states the analyst should see.
+  const liftieMapped = Boolean(PINNED_MISSING_LIFTS[entry.name]) || r() > 0.28;
+  const liftieInSeason = r() > 0.2;
+  // A feed we could not read produces no findings. Generating "missing lift"
+  // rows from a comparison that never ran would invent the one signal on this
+  // screen that is supposed to be operator-authoritative.
+  const liftieComparable = liftieMapped && liftieInSeason;
+  // Derived so the card is internally consistent: whatever the operator lists
+  // is what we matched, plus what we missed. `extra` are extracted lifts the
+  // feed does not name — usually a drag lift the status page ignores.
+  const extraLifts = Math.min(extractedLifts, int(r, 0, 2));
+  const matchedLifts = extractedLifts - extraLifts;
+  const referenceLiftCount = matchedLifts + missingLifts.length;
+
+  const reference: ReferenceComparison[] = [
+    liftieComparable
+      ? {
+          source: "liftie",
+          status: "ok",
+          detail: `Operator status page scraped via alpline-lifts. ${referenceLiftCount} lifts published, matched against extracted lift names through lift_name_aliases plus fuzzy match.`,
+          lifts: {
+            referenceCount: referenceLiftCount,
+            extractedCount: extractedLifts,
+            matchedCount: matchedLifts,
+            missing: missingLifts,
+            extraCount: extraLifts,
+          },
+          runs: null,
+        }
+      : {
+          source: "liftie",
+          status: "unavailable",
+          detail: liftieMapped
+            ? "Feed live but no lift list published (out of season). The comparison runs again once the operator publishes lift status."
+            : "No liftie mapping for this entry. The feed covers 201 resorts and this one is not among them.",
+          lifts: null,
+          runs: null,
+        },
+    {
+      source: "skimap",
+      status: "unavailable",
+      detail:
+        "Skimap index carries no lift or run counts — the entry is the editorial member list and the piste-map sheet, neither of which is countable. The sheet itself is compared by eye on the QA screen.",
+      lifts: null,
+      runs: null,
+    },
+    {
+      source: "declared",
+      status: "unavailable",
+      detail:
+        "No official figures recorded for this entry. Where declared counts should live is still open: a declaredCounts field on the onboarding manifest is proposed, not decided.",
+      lifts: null,
+      runs: null,
+    },
+  ];
+
+  /* ── findings ───────────────────────────────────────────────────────────── */
+
+  const attributedOf = (i: number) =>
+    attributedMembers.length ? attributedMembers[i % attributedMembers.length] : null;
+
+  const near = (i: number): LngLat => [
+    Math.round((entry.centroid[0] + (rng(`covpt:${entry.id}:${i}:x`)() - 0.5) * 0.16) * 1e6) / 1e6,
+    Math.round((entry.centroid[1] + (rng(`covpt:${entry.id}:${i}:y`)() - 0.5) * 0.1) * 1e6) / 1e6,
+  ];
+
+  const terminalCount = pinned ? 5 : int(r, 0, 4);
+  const terminals: CoverageFinding[] = Array.from({ length: terminalCount }, (_, i) => {
+    const tr = rng(`terminal:${entry.id}:${i}`);
+    const nodeId = int(tr, 1_000_000_00, 9_999_999_99);
+    const wayId = int(tr, 1_000_000_0, 9_999_999_9);
+    const gapM = int(tr, 22, 96);
+    const owner = attributedOf(i);
+    const lift = LIFT_NAMES[Math.floor(tr() * LIFT_NAMES.length)];
+    return {
+      id: `terminal:${nodeId}:${wayId}`,
+      type: "unconnected_terminal" as const,
+      label: `${lift} — ${i % 2 === 0 ? "top" : "bottom"} station`,
+      detail: `Terminal node ${nodeId} is ${gapM} m from the nearest piste node on way ${wayId} and no connector edge was generated. Every route that would use this lift is invisible to the router.`,
+      point: near(i),
+      memberId: owner?.resortId ?? null,
+      memberName: owner?.name ?? null,
+      km: null,
+      verdict: null,
+    };
+  });
+
+  const isolatedCount = pinned ? 1 : r() > 0.72 ? 1 : 0;
+  const isolated: CoverageFinding[] = Array.from({ length: isolatedCount }, (_, i) => {
+    const ir = rng(`isolated:${entry.id}:${i}`);
+    const km = pinned ? 3.1 : Math.round((0.6 + ir() * 5) * 10) / 10;
+    const ways = int(ir, 3, 11);
+    const owner = attributedOf(i + 1);
+    return {
+      id: `component:${entry.id.slice(0, 8)}:${i}`,
+      type: "isolated_component" as const,
+      label: `Isolated piste component — ${ways} ways, ${km} km`,
+      detail: `${km} km of piste sits in a graph component containing no lift edge, so nothing can be routed to it. The size floor that separates a pipeline gap from a legitimately unserved slope is still being calibrated, so read the geometry before deciding.`,
+      point: near(100 + i),
+      memberId: owner?.resortId ?? null,
+      memberName: owner?.name ?? null,
+      km,
+      verdict: null,
+    };
+  });
+
+  const referenceFindings: CoverageFinding[] = (liftieComparable ? missingLifts : []).map((name, i) => {
+    const owner = attributedOf(i + 2);
+    return {
+      id: `refLift:${entry.id.slice(0, 8)}:${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+      type: "missing_reference_lift" as const,
+      label: name,
+      detail: `The operator's own status page lists “${name}”, and no extracted lift matches it by name or alias. Either the lift is absent from OSM, or it is mapped under a different name and needs an alias.`,
+      point: near(200 + i),
+      memberId: owner?.resortId ?? null,
+      memberName: owner?.name ?? null,
+      km: null,
+      verdict: null,
+    };
+  });
+
+  const difficultyCount = int(r, 3, 12);
+  const difficulty: CoverageFinding[] = Array.from({ length: difficultyCount }, (_, i) => {
+    const dr = rng(`difficulty:${entry.id}:${i}`);
+    const wayId = int(dr, 1_000_000_0, 9_999_999_9);
+    const owner = attributedOf(i + 3);
+    return {
+      id: `difficulty:${wayId}`,
+      type: "missing_difficulty" as const,
+      label: `Piste way ${wayId}`,
+      detail:
+        "Tagged piste:type=downhill with no piste:difficulty. Routing still works but grades the run as unknown, so skill-aware routing cannot honour a skier's limit on it.",
+      point: near(300 + i),
+      memberId: owner?.resortId ?? null,
+      memberName: owner?.name ?? null,
+      km: null,
+      verdict: null,
+    };
+  });
+
+  return {
+    registryId: entry.id,
+    registryName: entry.name,
+    computedAt: iso(0),
+    graphAvailable: true,
+    graph,
+    members,
+    reference,
+    findings: [...terminals, ...isolated, ...referenceFindings, ...difficulty].slice(
+      0,
+      COVERAGE_FINDING_CAP
+    ),
+  };
+}
+
+/**
+ * The four coverage gates, derived from the current findings rather than stored
+ * — same rule as the report itself. Called with findings that already carry
+ * their verdicts, so the counts are live.
+ */
+export function buildCoverageGates(
+  findings: CoverageFinding[],
+  graphAvailable: boolean,
+  /**
+   * False when no reference source could be compared — no liftie mapping, or a
+   * feed that is live but out of season. `reference_delta` is then `not_run`
+   * rather than `pass`: a gate that could not run has not held, and reporting
+   * it green would be the most misleading thing on the screen.
+   */
+  referenceComparable = true
+): ValidationGate[] {
+  const open = (type: CoverageFinding["type"]) =>
+    findings.filter((f) => f.type === type && !SETTLING_VERDICTS.has(f.verdict?.value ?? ""));
+
+  const gate = (
+    key: GateKey,
+    title: string,
+    blocking: boolean,
+    open: CoverageFinding[],
+    failing: string,
+    passing: string,
+    ran = true
+  ): ValidationGate => ({
+    key,
+    status: !graphAvailable || !ran ? "not_run" : open.length === 0 ? "pass" : "fail",
+    title,
+    detail: !graphAvailable
+      ? "No routing graph on this database, so this gate has not run."
+      : !ran
+        ? "No reference source could be compared, so this gate has not run. It is not passing — nothing checked it."
+        : open.length === 0
+          ? passing
+          : failing,
+    count: graphAvailable && ran ? open.length : 0,
+    blocking,
+    waiver: null,
+    evidence: open.slice(0, 6).map((f) => ({
+      id: f.id,
+      label: f.label,
+      detail: f.detail.slice(0, 130),
+    })),
+  });
+
+  const terminals = open("unconnected_terminal");
+  const isolated = open("isolated_component");
+  const refLifts = open("missing_reference_lift");
+  const difficulty = open("missing_difficulty");
+
+  return [
+    gate(
+      "disconnected_terminal",
+      "Disconnected lift terminal",
+      true,
+      terminals,
+      `${terminals.length} lift terminal(s) never joined the routable graph. This is exactly the failure the v2 connector work exists to prevent, so a non-zero count here is a regression, not a data quirk.`,
+      "Every lift terminal is joined into the routable graph by a connector edge."
+    ),
+    gate(
+      "isolated_component",
+      "Isolated piste component",
+      true,
+      isolated,
+      `${isolated.length} piste component(s) above the size floor contain no lift edge, so nothing in them can be routed to.`,
+      "Every piste component above the size floor is reachable from a lift."
+    ),
+    gate(
+      "reference_delta",
+      "Reference delta",
+      true,
+      refLifts,
+      `${refLifts.length} lift(s) on the operator's own status page have no extracted counterpart. Lift names diff near-exactly; the run-count half of this comparison has no agreed tolerance yet and is not gated.`,
+      "Every lift the operator publishes has an extracted counterpart.",
+      referenceComparable
+    ),
+    gate(
+      "missing_difficulty",
+      "Missing piste difficulty",
+      false,
+      difficulty,
+      `${difficulty.length} way(s) carry piste:type with no difficulty. Routing degrades to an unknown grade rather than breaking, so this warns rather than blocks.`,
+      "Every piste way carries a difficulty grade."
+    ),
+  ];
+}
+
+/**
+ * The sixth QA check. Coverage is the routing half of "is this entry actually
+ * complete", and publishing without it would mean publishing a resort whose map
+ * is measured and whose router is not.
+ */
+export function buildCoverageQaCheck(
+  registryId: string,
+  graphAvailable: boolean,
+  gates: ValidationGate[],
+  unresolvedFindings: number
+): QaCheck {
+  const blockingFail = gates.filter((g) => g.blocking && g.status === "fail");
+
+  if (!graphAvailable) {
+    return {
+      id: `${registryId}:coverage_signed_off`,
+      key: "coverage_signed_off",
+      title: "Routing coverage signed off",
+      status: "warn",
+      count: 0,
+      detail:
+        "No routing graph on this database yet, so coverage is unmeasured. It runs after the pipeline imports this region; until then nothing here has been verified against the graph.",
+      items: [],
+      waiver: null,
+    };
+  }
+
+  if (blockingFail.length > 0) {
+    return {
+      id: `${registryId}:coverage_signed_off`,
+      key: "coverage_signed_off",
+      title: "Routing coverage signed off",
+      status: "fail",
+      count: blockingFail.length,
+      detail:
+        "Blocking coverage gates are still failing. Clear or waive them on the Coverage tab — publishing now would ship a resort whose POIs are measured and whose routing graph is not.",
+      items: blockingFail.map((g) => ({
+        id: `${registryId}:coverage:${g.key}`,
+        label: g.title,
+        detail: `${g.count} open — ${g.detail}`,
+        placeId: null,
+        point: null,
+      })),
+      waiver: null,
+    };
+  }
+
+  return {
+    id: `${registryId}:coverage_signed_off`,
+    key: "coverage_signed_off",
+    title: "Routing coverage signed off",
+    status: "pass",
+    count: 0,
+    detail:
+      unresolvedFindings > 0
+        ? `Every blocking coverage gate passes or is waived. ${unresolvedFindings} warn-level finding(s) remain in the queue.`
+        : "Every coverage gate passes or is waived and the findings queue is empty.",
+    items: [],
+    waiver: null,
+  };
 }
