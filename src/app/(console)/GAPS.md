@@ -135,11 +135,17 @@ both must be green before `publish`. Contract-first like every other phase:
 extend `ingestion-api.ts` (schemas + `StageKey` + new `GateKey` values), teach
 the mock adapter fixtures, then build the backend against the frozen shape.
 
+Endpoints are **registry-scoped like QA**, not run-scoped (refined 2026-09-11
+when the backend was built): coverage is computed live from the current
+`ski_routing` graph, never from run artifacts, and routing-stage runs do not
+exist until the pipeline grows the stage. Full frozen shapes in
+`alpline-admin/ROUTING-COVERAGE-CONSOLE-PROMPT.md`.
+
 | # | Route | Notes |
 |---|---|---|
-| 24 | `GET /ingestion/runs/:runId/coverage` | The coverage report, computed live from the `ski_routing` schema (never snapshotted — same rule as every review queue). Three sections: **graph** (nodes/edges/components per member territory, connector-edge count, % of piste km reachable from a lift); **extraction census** (runs by difficulty and lifts by type extracted per member, each with `osmRef`); **reference comparison** (the same counts from independent sources — see the sources table below — with per-source deltas). Plus the diagnostics queues: unconnected lift terminals, isolated piste components, ways missing `piste:type`/difficulty, each capped and nearest-first like the orphan queue. |
-| 25 | `POST /ingestion/runs/:runId/coverage/verdicts` | Batched, idempotent per finding id, one audit row each — the harvest-verdict pattern. Verdicts: `fix_upstream` (the gap is real and belongs in OSM; records the finding and re-checks automatically on the next harvest — the console never edits OSM), `local_override` (store a connector edge or tag override as our own evidence layer over OSM, provenance `source: 'override'`), `accept_gap` (reason mandatory — e.g. a decommissioned lift OSM still carries), `retry` (re-extract after an upstream fix landed). |
-| — | `POST /ingestion/runs/:runId/gates/:gateKey/waive` | **Reused from phase 3** (#10) — the endpoint is already generic over `gateKey`; the new keys below just extend the enum. |
+| 24 | `GET /ingestion/registry/:registryId/coverage` | The coverage report, computed live (never snapshotted — same rule as every review queue). `graphAvailable: false` with zeroed stats and `not_run` gates on a database the pipeline has not populated — a designed state, not an error. Sections: **graph** (edges/components/connectors, routable km, % of piste km reachable from a lift); **per-member census** (piste km, lifts by type, named runs by difficulty — attributed via the member's OSM polygon); **reference comparison** (liftie lift names, skimap, declared counts); **findings** (unconnected terminals, isolated components, missing difficulty, liftie lifts with no OSM counterpart), capped, unresolved first. |
+| 25 | `POST /ingestion/registry/:registryId/coverage/verdicts` | Batched, idempotent per finding id, one audit row each — the harvest-verdict pattern. Verdicts: `fix_upstream` (the gap is real and belongs in OSM; recorded and re-checked after re-extract — the console never edits OSM), `local_override` (record a graph-repair decision as our own evidence over OSM — never traced geometry), `accept_gap` (reason mandatory — e.g. a decommissioned lift the feed still lists), `retry`. Verdicts persist in registry metadata so they survive graph rebuilds. |
+| 26 | `POST /ingestion/registry/:registryId/coverage/gates/:gateKey/waive` | Coverage gates are registry-scoped state, so their waive route is too — the run-scoped phase 3 waive stays membership-only. |
 
 New gates, enforced server-side like the phase 3 four:
 
