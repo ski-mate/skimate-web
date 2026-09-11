@@ -29,16 +29,40 @@ export interface Figure {
 /** A reference into the article's own `figures` map. */
 export type FigureRef = string;
 
+/**
+ * One numbered step. Plain `RichText` is the common case; the object form
+ * carries sub-bullets, which the console analyst manual's runbooks use to hang
+ * a list of invariants off a single numbered instruction. Keeping them inside
+ * the step matters — the manual's numbering is followed literally, so a
+ * sub-bullet promoted to its own block would renumber the runbook.
+ */
+export type StepItem = RichText | { text: RichText; sub?: RichText[] };
+
+export function stepText(item: StepItem): RichText {
+  return Array.isArray(item) ? item : item.text;
+}
+
+export function stepSub(item: StepItem): RichText[] {
+  return Array.isArray(item) ? [] : (item.sub ?? []);
+}
+
 export type GuideBlock =
   | { kind: "p"; text: RichText }
   | { kind: "note"; text: RichText }
   | { kind: "tip"; text: RichText }
   | { kind: "warning"; text: RichText }
-  | { kind: "steps"; items: RichText[] }
+  | { kind: "steps"; items: StepItem[] }
   | { kind: "bullets"; items: RichText[] }
   | { kind: "heading"; text: string; id: string }
   | { kind: "figure"; figure: FigureRef }
-  | { kind: "table"; head: string[]; rows: string[][] };
+  /** Preformatted. The manual uses one for its stage-pipeline diagram. */
+  | { kind: "code"; text: string }
+  /**
+   * Cells are RichText, not strings: the analyst manual's verdict and gate
+   * tables lean on bold and inline code to name the values being described,
+   * and rendering a cell as a plain string printed the asterisks.
+   */
+  | { kind: "table"; head: RichText[]; rows: RichText[][] };
 
 export type SectionId =
   | "navigation"

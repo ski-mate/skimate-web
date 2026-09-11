@@ -50,6 +50,7 @@ export async function middleware(request: NextRequest) {
 
   const signedIn = Boolean(email) && allowed.includes(email!);
   const isLogin = path === "/console/login" || path.startsWith("/console/auth");
+  const isManual = path.startsWith("/guide/console");
 
   if (!signedIn && !isLogin) {
     const to = new URL("/console/login", request.url);
@@ -64,9 +65,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/console", request.url));
   }
 
+  // Nothing under the manual should ever be cached by a shared cache: the
+  // whole point is that it is not public.
+  if (isManual) {
+    response.headers.set("cache-control", "private, no-store");
+    response.headers.set("x-robots-tag", "noindex, nofollow, noarchive");
+  }
+
   return response;
 }
 
 export const config = {
-  matcher: ["/console/:path*"],
+  // The analyst manual lives under /guide/console because it documents the
+  // console, but it is gated exactly like the console: it names internal
+  // tooling, provider costs and data policy. The page also checks the session
+  // itself, so dropping out of this matcher cannot silently publish it.
+  matcher: ["/console/:path*", "/guide/console/:path*"],
 };

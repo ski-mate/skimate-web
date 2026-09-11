@@ -1,5 +1,5 @@
 import { DeviceFrame } from "@/components/apple/DeviceFrame";
-import type { Figure, GuideBlock } from "@/content/guide/types";
+import { stepSub, stepText, type Figure, type GuideBlock } from "@/content/guide/types";
 import { Callout } from "./Callout";
 import { RichTextView } from "./RichTextView";
 
@@ -20,7 +20,9 @@ function FigureView({ figure }: { figure: Figure }) {
           alt={figure.alt}
           width={figure.width}
           height={figure.height}
-          className="w-full rounded-card"
+          loading="lazy"
+          decoding="async"
+          className="w-full rounded-card border border-[var(--separator)]"
         />
       )}
       {figure.caption ? (
@@ -79,7 +81,19 @@ export function GuideBlocks({
                       {n + 1}
                     </span>
                     <span className="type-body text-[var(--label-2)]">
-                      <RichTextView text={item} />
+                      <RichTextView text={stepText(item)} />
+                      {stepSub(item).length > 0 && (
+                        <ul className="mt-2 space-y-1.5 pl-5">
+                          {stepSub(item).map((sub, k) => (
+                            <li
+                              key={k}
+                              className="list-disc text-[var(--label-2)] marker:text-[var(--label-4)]"
+                            >
+                              <RichTextView text={sub} />
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </span>
                   </li>
                 ))}
@@ -106,18 +120,28 @@ export function GuideBlocks({
             return figure ? <FigureView key={i} figure={figure} /> : null;
           }
 
+          case "code":
+            return (
+              <pre
+                key={i}
+                className="my-6 overflow-x-auto rounded-card bg-[var(--fill)] p-4 text-[13px] leading-relaxed"
+              >
+                <code>{block.text}</code>
+              </pre>
+            );
+
           case "table":
             return (
               <div key={i} className="my-6 overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>
                     <tr>
-                      {block.head.map((h) => (
+                      {block.head.map((h, c) => (
                         <th
-                          key={h}
+                          key={c}
                           className="type-callout border-b border-[var(--separator)] py-2 pr-4 font-semibold"
                         >
-                          {h}
+                          <RichTextView text={h} />
                         </th>
                       ))}
                     </tr>
@@ -128,9 +152,9 @@ export function GuideBlocks({
                         {row.map((cell, c) => (
                           <td
                             key={c}
-                            className="type-callout border-b border-[var(--separator)] py-2 pr-4 text-[var(--label-2)]"
+                            className="type-callout border-b border-[var(--separator)] py-2 pr-4 align-top text-[var(--label-2)]"
                           >
-                            {cell}
+                            <RichTextView text={cell} />
                           </td>
                         ))}
                       </tr>

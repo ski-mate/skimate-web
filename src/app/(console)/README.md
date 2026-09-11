@@ -257,6 +257,33 @@ Stage 4 is out of scope for v1. The nav stub says what it will be.
 
 ---
 
+## The analyst manual
+
+`/guide/console` is the onboarding manual and day-to-day runbook for the analyst
+role — one page per chapter, behind the same allow-list as the console itself
+(the middleware matcher covers its screenshots too, not just its pages).
+
+Its source is `docs/CONSOLE-ANALYST-MANUAL.md`, mirrored from alpline-admin.
+The Markdown stays the source of truth and is compiled into typed guide blocks,
+so re-syncing is a copy and a command rather than a hand conversion:
+
+```bash
+cp ../alpline-admin/CONSOLE-ANALYST-MANUAL.md docs/
+node scripts/build-console-manual.mjs
+```
+
+The generator refuses to emit on drift — an unrecognised chapter heading, a
+chapter that parses to nothing, non-contiguous numbering, or a runbook step
+count that does not match the source. Analysts follow the numbering literally,
+so a silently dropped step would be worse than a failed build.
+
+Screenshots live in `src/content/console-manual/figures.ts` rather than in the
+Markdown, because `chapters.ts` is generated and a re-sync would wipe anything
+hand-added. Each chapter's screenshot is spliced in immediately above its first
+runbook.
+
+---
+
 ## Conventions
 
 **Keyboard first.** `?` on any screen lists every binding it has declared. A
