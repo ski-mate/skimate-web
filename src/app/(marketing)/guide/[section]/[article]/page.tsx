@@ -13,7 +13,7 @@ import {
   getNeighbours,
   publishedArticles,
 } from "@/content/guide";
-import type { GuideArticle } from "@/content/guide/types";
+import { stepText, type GuideArticle } from "@/content/guide/types";
 import { RichTextView } from "@/components/guide/RichTextView";
 import { SITE_URL, pageMetadata } from "@/lib/seo";
 
@@ -55,7 +55,9 @@ function articleGraph(article: GuideArticle): Graph {
   const stepBlocks = article.blocks.filter(
     (b): b is Extract<typeof b, { kind: "steps" }> => b.kind === "steps"
   );
-  const steps = stepBlocks.flatMap((b) => b.items.map(plain));
+  // Sub-bullets are deliberately not flattened into HowTo steps: a HowToStep
+  // is an instruction, and the sub-bullets hang detail off one.
+  const steps = stepBlocks.flatMap((b) => b.items.map((it) => plain(stepText(it))));
 
   const breadcrumbs = {
     "@type": "BreadcrumbList" as const,
