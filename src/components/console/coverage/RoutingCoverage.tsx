@@ -44,13 +44,35 @@ const VERDICT_LABEL: Record<CoverageVerdictValue, string> = {
   retry: "Retry",
 };
 
-/** European piste grading, so the census bar reads like a trail map legend. */
+/**
+ * European piste grading, in the order a trail map prints it.
+ *
+ * The order is fixed here rather than taken from the payload. The backend
+ * builds `runsByDifficulty` by first-seen order in its SQL result, so key order
+ * differs per member — Courchevel arrives novice/easy/advanced/intermediate,
+ * Les Menuires easy/intermediate/advanced/novice. Rendering in payload order
+ * made the bars mutually incomparable, which is the only thing a stacked bar is
+ * for. Anything the backend sends that is not in this list is appended after
+ * it, so a new OSM grade shows up rather than vanishing.
+ */
+const DIFFICULTY_ORDER = [
+  "novice",
+  "easy",
+  "intermediate",
+  "advanced",
+  "expert",
+  "freeride",
+  "unknown",
+] as const;
+
 const DIFFICULTY_COLOR: Record<string, string> = {
-  novice: "#34c759",
-  easy: "#007aff",
-  intermediate: "#ff3b30",
-  advanced: "#1d1d1f",
-  expert: "#5e5ce6",
+  novice: "var(--grade-novice)",
+  easy: "var(--grade-easy)",
+  intermediate: "var(--grade-intermediate)",
+  advanced: "var(--grade-advanced)",
+  expert: "var(--grade-expert)",
+  freeride: "var(--grade-freeride)",
+  unknown: "var(--grade-unknown)",
 };
 
 export function RoutingCoverage({
@@ -620,8 +642,6 @@ function Census({
   attributedKm: number;
   data: CoverageResponse;
 }) {
-  const shortfall = Math.round((data.graph.routableKm - attributedKm) * 10) / 10;
-
   return (
     <section className="scroll-y min-h-0 p-3">
       <h2 className="mb-1.5 text-[12px] font-semibold">
@@ -636,8 +656,18 @@ function Census({
           <tr className="text-[10px] text-[var(--label-3)]">
             <th className="w-[34%] pb-1 text-left font-medium">Member</th>
             <th className="pb-1 text-right font-medium">Piste km</th>
-            <th className="pb-1 text-right font-medium">Lifts</th>
-            <th className="pb-1 text-right font-medium">Named runs</th>
+            <th
+              className="pb-1 text-right font-medium"
+              title="Distinct lift names, not lift count — two lifts sharing a name count once, and a lift with no name in OSM is not counted at all."
+            >
+              Lifts
+            </th>
+            <th
+              className="pb-1 text-right font-medium"
+              title="Distinct run names. An unnamed piste contributes its km but no run."
+            >
+              Named runs
+            </th>
             <th className="w-[24%] pb-1 pl-3 text-left font-medium">Grades</th>
           </tr>
         </thead>
@@ -649,9 +679,9 @@ function Census({
                 {!m.attributed && (
                   <span
                     className="block text-[10px] text-[var(--label-4)]"
-                    title="Without a polygon there is nothing to scope graph edges by. The domain's km are still measured — they just belong to the group row, not to this member."
+                    title="This member has no anchor point, so no graph edge can be attributed to it. The domain's km are still measured — they are shared out among the members that do have one."
                   >
-                    no OSM polygon — not attributable
+                    no anchor — not attributable
                   </span>
                 )}
               </td>
@@ -672,21 +702,26 @@ function Census({
         </tbody>
       </table>
 
-      {/* The number that matters most on a group: what the census cannot
-          account for. A large shortfall is the missing-leaf diagnosis again. */}
-      <p className="mt-1.5 text-[10px] leading-snug text-[var(--label-3)]">
-        {attributedKm.toFixed(1)} km attributed to members of {data.graph.routableKm.toFixed(1)} km
-        routable.{" "}
-        {shortfall > 1 ? (
-          <>
-            <b className="font-medium text-[var(--c-warn)]">{shortfall.toFixed(1)} km</b> lies in
-            extent no member polygon covers — usually leaves that do not exist in the registry yet,
-            the same diagnosis the orphan belt gives from the POI side.
-          </>
-        ) : (
-          <>Member polygons account for the whole graph.</>
-        )}
-      </p>
+      <div className="mt-1.5 space-y-1">
+        <GradeLegend members={members} />
+        {/* Deliberately not a shortfall.
+            An earlier version subtracted this total from graph.routableKm and
+            called the remainder "extent no member polygon covers". It is not:
+            routableKm sums every edge class, piste and lift and connector
+            alike, while this column counts piste edges only — and the backend
+            attributes every edge to its nearest member anchor with no distance
+            limit, so no piste km can go unclaimed by construction. On Les 3
+            Vallées that invented "180.5 km orphaned" out of what is simply the
+            length of 150 lift lines. The contract exposes no piste-only total
+            to compare against, so the honest statement is the total itself.
+            See GAPS.md open question 12. */}
+        <p className="text-[10px] leading-snug text-[var(--label-3)]">
+          {attributedKm.toFixed(1)} km of piste across {members.length} member
+          {members.length === 1 ? "" : "s"}. The graph&rsquo;s{" "}
+          {data.graph.routableKm.toFixed(1)} km routable is not comparable — it counts lift and
+          connector edges too.
+        </p>
+      </div>
     </section>
   );
 }
@@ -700,8 +735,18 @@ function typeBreakdown(byType: Record<string, number>): string {
   );
 }
 
+function orderedGrades(runs: Record<string, number>): [string, number][] {
+  const known = DIFFICULTY_ORDER.filter((k) => (runs[k] ?? 0) > 0).map(
+    (k) => [k, runs[k]] as [string, number]
+  );
+  const extra = Object.entries(runs).filter(
+    ([k, n]) => n > 0 && !DIFFICULTY_ORDER.includes(k as (typeof DIFFICULTY_ORDER)[number])
+  );
+  return [...known, ...extra];
+}
+
 function GradeBar({ runs }: { runs: Record<string, number> }) {
-  const entries = Object.entries(runs).filter(([, n]) => n > 0);
+  const entries = orderedGrades(runs);
   const total = entries.reduce((n, [, v]) => n + v, 0);
   if (total === 0) return <span className="text-[10px] text-[var(--label-4)]">—</span>;
   return (
@@ -714,9 +759,31 @@ function GradeBar({ runs }: { runs: Record<string, number> }) {
           key={k}
           style={{
             width: `${(n / total) * 100}%`,
-            background: DIFFICULTY_COLOR[k] ?? "var(--label-4)",
+            background: DIFFICULTY_COLOR[k] ?? "var(--grade-unknown)",
           }}
         />
+      ))}
+    </span>
+  );
+}
+
+/** Without this the bar is a row of unlabelled colours. */
+function GradeLegend({ members }: { members: CoverageMemberStats[] }) {
+  const present = DIFFICULTY_ORDER.filter((k) =>
+    members.some((m) => (m.runsByDifficulty[k] ?? 0) > 0)
+  );
+  if (present.length === 0) return null;
+  return (
+    <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+      {present.map((k) => (
+        <span key={k} className="inline-flex items-center gap-1 text-[10px] text-[var(--label-3)]">
+          <span
+            aria-hidden
+            className="size-[7px] rounded-[2px]"
+            style={{ background: DIFFICULTY_COLOR[k] }}
+          />
+          {k}
+        </span>
       ))}
     </span>
   );

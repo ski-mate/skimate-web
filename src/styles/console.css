@@ -40,6 +40,20 @@
   --c-wikidata: #0f9d9d;
   --c-manual: #8e8e93;
 
+  /* European piste grading, for the coverage census bar. `advanced` is printed
+     black on a trail map, which on a dark console reads as a hole in the bar
+     rather than a segment — so the dark scheme lifts it to a grey that still
+     sits darkest in the ramp. `freeride` and `unknown` are real OSM values and
+     need their own colours; without them they fall back to a grey that is
+     indistinguishable from an ungraded gap. */
+  --grade-novice: #34c759;
+  --grade-easy: #007aff;
+  --grade-intermediate: #ff3b30;
+  --grade-advanced: #1d1d1f;
+  --grade-expert: #5e5ce6;
+  --grade-freeride: #ff9500;
+  --grade-unknown: #c7c7cc;
+
   font-size: 13px;
   line-height: 1.4;
   color: var(--label);
@@ -54,6 +68,9 @@
     --c-pass-bg: rgba(48, 209, 88, 0.2);
     --c-waiting-bg: rgba(142, 142, 147, 0.22);
     --c-waived-bg: rgba(191, 90, 242, 0.2);
+
+    --grade-advanced: #6e6e73;
+    --grade-unknown: #48484a;
   }
 }
 

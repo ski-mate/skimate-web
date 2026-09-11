@@ -225,6 +225,50 @@ returns, but the shape assumes an answer exists.
     exactly, so this is a backend decision with no console work either way —
     but the mock carries a comment pointing here, and the screen deliberately
     says what each verdict *records* rather than what it does to the gate.
+12. **(Phase 7) `graph` exposes no piste-only total.** `graph.routableKm` sums
+    every edge class — piste, lift and connector. There is no piste-only
+    equivalent in the payload, even though `coverage.service.ts` already
+    computes one (`piste_m`, used for `reachablePistePct`). Without it the
+    census cannot say what share of the domain's *piste* it has attributed; it
+    can only state its own total. Adding `graph.pisteKm` would close that, and
+    costs the backend nothing — the value is already in the query. Not added to
+    the contract unilaterally, because a required field the deployed backend
+    does not send would fail the zod parse on every read.
+13. **(Phase 7) Member attribution is a centroid Voronoi, not polygon
+    containment.** `memberStats` assigns each edge with
+    `ORDER BY member_point <-> ST_PointOnSurface(edge_geom) LIMIT 1` — nearest
+    member anchor, no distance limit, polygons never consulted. Two
+    consequences worth a decision:
+    - `attributed` means "has a centroid", not "has an OSM polygon" as the
+      contract comment on `CoverageMemberStats` says. One of the two should
+      move; the console now says "no anchor" rather than "no OSM polygon".
+    - The split is visibly wrong where anchors sit off-centre in their terrain.
+      On Les 3 Vallées, La Tania takes 35.2 km and 11 lifts against roughly
+      three lifts of its own, because its anchor sits between Courchevel and
+      Méribel and wins the Le Praz / Dou des Lanches cells; Les Menuires takes
+      157.2 km — more than Courchevel or Méribel — while
+      Saint-Martin-de-Belleville is left 11.2 km. Valley totals look right
+      (Courchevel + La Tania = 150.3 km), so it is the internal boundary that
+      is misplaced, exactly the signature of a Voronoi over off-centre anchors.
+      Scoping by the member's polygon where it has one, and falling back to
+      nearest-anchor only where it does not, would fix it and would match what
+      the contract already claims happens.
+
+      Named evidence from the local stack, scoped exactly as `components()`
+      scopes it: **La Tania** is credited with Saulire, Vizelle, Loze and Dou
+      des Lanches — Courchevel 1850's own lifts — for 11 against roughly three
+      of its own. **Saint-Martin-de-Belleville** gets exactly four (Saint Martin
+      1, Biolley 1, Biolley 2, Village), missing the Châtelard and Jérusalem
+      side entirely, which lands in Les Menuires' 33.
+14. **(Phase 7) The census counts lift and run *names*, not lifts and runs.**
+    `memberStats` aggregates into `Set<slug(name)>` and skips any edge with no
+    name. In the Les 3 Vallées scope that is **170 distinct lift ways, 20 of
+    them unnamed and therefore never counted** — the census reports 150. Two
+    lifts sharing a name inside one member would also collapse to one. The
+    console now says "distinct lift names" in the column tooltip rather than
+    implying a lift count, but whether the census should count ways, named
+    entities, or operator-recognisable lifts is a backend decision, and it is
+    the denominator `reference_delta` diffs against.
 
 ## Notes on things that are deliberately *not* in the contract
 
