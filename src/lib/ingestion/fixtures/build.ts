@@ -1219,7 +1219,7 @@ const LIFT_NAMES = [
 /** Pinned so the flagship domain reads like the pipeline's own report. */
 const PINNED_GRAPH: Record<
   string,
-  { edges: number; components: number; largestComponentPct: number; routableKm: number; connectorEdges: number; reachablePistePct: number }
+  { edges: number; components: number; largestComponentPct: number; routableKm: number; connectorEdges: number; pisteKm: number; reachablePistePct: number }
 > = {
   "Les 3 Vallées": {
     edges: 21_438,
@@ -1227,16 +1227,10 @@ const PINNED_GRAPH: Record<
     largestComponentPct: 98.3,
     routableKm: 770.4,
     connectorEdges: 1_104,
+    // The piste-only share of routableKm — the census sums to exactly this.
+    pisteKm: 592.7,
     reachablePistePct: 97.1,
   },
-};
-
-/**
- * Share of the graph's routable km that member polygons can account for.
- * Les 3 Vallées is pinned low on purpose: three of its leaves do not exist.
- */
-const ATTRIBUTED_FRACTION: Record<string, number> = {
-  "Les 3 Vallées": 0.21,
 };
 
 /** Liftie lifts with no OSM counterpart — the strongest "we missed one" signal. */
@@ -1250,23 +1244,16 @@ export const COVERAGE_FINDING_CAP = 60;
 /**
  * Which verdicts settle a gate.
  *
- * All four, matching the shipped backend: a reviewed finding stops counting
- * against its gate whatever the verdict was. Verified against alpline-backend
- * on 2026-09-11 — a `fix_upstream` verdict took `disconnected_terminal` from
- * 11 to 10 there, so the mock does the same.
- *
- * It is arguably the wrong rule. `fix_upstream` and `retry` both mean "still
- * broken, the fix is elsewhere", so a gate that goes green the moment someone
- * files an OSM note is measuring intent rather than the graph. That is a
- * backend decision, not a console one, and it is raised as open question 11 in
- * GAPS.md rather than settled differently here — a mock that disagreed with
- * the real thing would teach the console the wrong lesson.
+ * GAPS 11, decided and implemented backend-side on 2026-09-11: only verdicts
+ * that are claims about the graph itself settle a gate — `local_override`
+ * (we repaired it) and `accept_gap` (it is correct as-is). `fix_upstream`
+ * and `retry` mean "still broken, the fix is elsewhere", so the gate stays
+ * failing until a re-extract clears the finding or the analyst waives the
+ * gate. The mock mirrors the shipped rule, as always.
  */
 export const SETTLING_VERDICTS: ReadonlySet<string> = new Set([
   "local_override",
   "accept_gap",
-  "fix_upstream",
-  "retry",
 ]);
 
 function distribute(total: number, keys: readonly string[], r: () => number): Record<string, number> {
@@ -1283,41 +1270,30 @@ function distribute(total: number, keys: readonly string[], r: () => number): Re
 /**
  * Per-member census.
  *
- * Member km are a *share of the graph's routable km*, never an independent
- * number: the census exists to say how the measured graph divides between
- * members, and a census that sums to more than the graph it describes would be
- * worse than no census. What it does not sum to is the point — the shortfall is
- * domain covered by no member polygon.
+ * Member km are a *division of the graph's piste km*, never independent
+ * numbers: the backend attributes every scoped piste edge to a member
+ * (polygon containment first, nearest anchor as fallback — GAPS 13), so the
+ * census sums to graph.pisteKm exactly. A member is unattributed only when
+ * it has neither polygon nor anchor.
  */
 function buildCoverageMembers(
   built: BuiltEntry,
   memberEntries: RegistryEntry[],
-  routableKm: number
+  pisteKmTotal: number
 ): CoverageMemberStats[] {
   const roster = memberEntries.length ? memberEntries : [built.entry];
 
-  // No polygon means nothing to scope graph edges by. Reporting zeros would
-  // read as "this member has no pistes"; it has no *attribution*, which is a
-  // different and more actionable statement.
-  const weights = roster.map((m) =>
-    m.osmIds.length > 0 ? 0.4 + rng(`coverage:weight:${m.id}`)() : 0
-  );
+  // Every fixture entry has a centroid, so the anchor fallback attributes
+  // them all — matching the shipped backend, where attributed:false needs a
+  // member with neither polygon nor anchor.
+  const weights = roster.map((m) => 0.4 + rng(`coverage:weight:${m.id}`)());
   const totalWeight = weights.reduce((n, w) => n + w, 0) || 1;
-
-  // How much of the extent the member polygons actually cover. A leaf is its
-  // own extent. Les 3 Vallées is pinned low because its three biggest leaves —
-  // Courchevel, Méribel, Les Menuires — have no polygon and therefore no
-  // registry entry: the same missing-leaf diagnosis as the orphan belt, seen
-  // from the graph.
-  const attributedFraction =
-    ATTRIBUTED_FRACTION[built.entry.name] ??
-    (built.entry.kind === "group" ? 0.62 + rng(`coverage:frac:${built.entry.id}`)() * 0.33 : 0.96);
 
   return roster.map((m, i) => {
     const mr = rng(`coverage:member:${m.id}`);
     const attributed = weights[i] > 0;
     const pisteKm = attributed
-      ? Math.round(routableKm * attributedFraction * (weights[i] / totalWeight) * 10) / 10
+      ? Math.round(pisteKmTotal * (weights[i] / totalWeight) * 10) / 10
       : 0;
     // Roughly one lift per 9 km of piste, which is the density a real domain
     // runs at; a census that puts 3 lifts against 100 km reads as broken data.
@@ -1361,6 +1337,7 @@ export function buildCoverage(
         largestComponentPct: null,
         routableKm: 0,
         connectorEdges: 0,
+        pisteKm: 0,
         reachablePistePct: null,
       },
       members: [],
@@ -1376,10 +1353,13 @@ export function buildCoverage(
     largestComponentPct: Math.round((100 - r() * 7) * 10) / 10,
     routableKm: Math.round(Math.max(4, built.trails * 1.9) * 10) / 10,
     connectorEdges: built.lifts * 7 + int(r, 0, 40),
+    // Piste is roughly three quarters of routable on a real domain; the rest
+    // is lift lines and connectors.
+    pisteKm: Math.round(Math.max(3, built.trails * 1.9) * 0.76 * 10) / 10,
     reachablePistePct: Math.round((100 - r() * 9) * 10) / 10,
   };
 
-  const members = buildCoverageMembers(built, memberEntries, graph.routableKm);
+  const members = buildCoverageMembers(built, memberEntries, graph.pisteKm);
   const attributedMembers = members.filter((m) => m.attributed);
   // Domain-wide, not the member sum: the reference feed lists the operator's
   // whole lift estate, and attribution is a separate question. Comparing a

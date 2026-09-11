@@ -704,22 +704,18 @@ function Census({
 
       <div className="mt-1.5 space-y-1">
         <GradeLegend members={members} />
-        {/* Deliberately not a shortfall.
-            An earlier version subtracted this total from graph.routableKm and
-            called the remainder "extent no member polygon covers". It is not:
-            routableKm sums every edge class, piste and lift and connector
-            alike, while this column counts piste edges only — and the backend
-            attributes every edge to its nearest member anchor with no distance
-            limit, so no piste km can go unclaimed by construction. On Les 3
-            Vallées that invented "180.5 km orphaned" out of what is simply the
-            length of 150 lift lines. The contract exposes no piste-only total
-            to compare against, so the honest statement is the total itself.
-            See GAPS.md open question 12. */}
+        {/* graph.pisteKm is the piste-only total (GAPS 12, since fixed), so
+            this is now a like-for-like comparison. It reconciles exactly on a
+            healthy report — the backend attributes every scoped piste edge to
+            a member (polygon first, nearest anchor as fallback), so a shortfall
+            here means members without any anchor, not missing terrain.
+            routableKm stays out of this sentence: it also counts lift and
+            connector edges. */}
         <p className="text-[10px] leading-snug text-[var(--label-3)]">
-          {attributedKm.toFixed(1)} km of piste across {members.length} member
-          {members.length === 1 ? "" : "s"}. The graph&rsquo;s{" "}
-          {data.graph.routableKm.toFixed(1)} km routable is not comparable — it counts lift and
-          connector edges too.
+          {attributedKm.toFixed(1)} of the graph&rsquo;s {data.graph.pisteKm.toFixed(1)} piste km
+          attributed across {members.length} member{members.length === 1 ? "" : "s"}. (The{" "}
+          {data.graph.routableKm.toFixed(1)} km routable figure also counts lift and connector
+          edges.)
         </p>
       </div>
     </section>

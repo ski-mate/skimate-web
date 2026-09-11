@@ -952,6 +952,8 @@ export const CoverageResponse = z.object({
     largestComponentPct: z.number().nullable(),
     routableKm: z.number().nonnegative(),
     connectorEdges: z.number().int().nonnegative(),
+    /** Piste-only km — the honest denominator for the census (was GAPS 12). */
+    pisteKm: z.number().nonnegative(),
     /** % of piste km in a component that also contains a lift edge. */
     reachablePistePct: z.number().nullable(),
   }),

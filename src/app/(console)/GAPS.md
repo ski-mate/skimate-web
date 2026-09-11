@@ -225,6 +225,10 @@ returns, but the shape assumes an answer exists.
     exactly, so this is a backend decision with no console work either way —
     but the mock carries a comment pointing here, and the screen deliberately
     says what each verdict *records* rather than what it does to the gate.
+    **Decided and shipped 2026-09-11 (alpline-backend PR #70): only
+    `local_override` and `accept_gap` settle a gate; `fix_upstream`/`retry`
+    leave it failing until a re-extract clears the finding or the gate is
+    waived. The mock mirrors the new rule.**
 12. **(Phase 7) `graph` exposes no piste-only total.** `graph.routableKm` sums
     every edge class — piste, lift and connector. There is no piste-only
     equivalent in the payload, even though `coverage.service.ts` already
@@ -234,6 +238,9 @@ returns, but the shape assumes an answer exists.
     costs the backend nothing — the value is already in the query. Not added to
     the contract unilaterally, because a required field the deployed backend
     does not send would fail the zod parse on every read.
+    **Fixed 2026-09-11 (PR #70): `graph.pisteKm` shipped backend-side and added
+    to the contract; the census footer now compares like for like, and on the
+    live stack attributed km reconciles with it exactly (589.4 = 589.4).**
 13. **(Phase 7) Member attribution is a centroid Voronoi, not polygon
     containment.** `memberStats` assigns each edge with
     `ORDER BY member_point <-> ST_PointOnSurface(edge_geom) LIMIT 1` — nearest
@@ -253,6 +260,12 @@ returns, but the shape assumes an answer exists.
       Scoping by the member's polygon where it has one, and falling back to
       nearest-anchor only where it does not, would fix it and would match what
       the contract already claims happens.
+      **Fixed structurally 2026-09-11 (PR #70): attribution is now
+      polygon-first (member `osm_ids` → `ski_routing.ski_resorts` boundaries)
+      with nearest-anchor fallback, and `attributed` means "has polygon or
+      anchor". The L3V split itself will not move until its members carry
+      polygon evidence — that is identity work in the wizard, not a coverage
+      bug.**
 
       Named evidence from the local stack, scoped exactly as `components()`
       scopes it: **La Tania** is credited with Saulire, Vizelle, Loze and Dou
@@ -269,6 +282,10 @@ returns, but the shape assumes an answer exists.
     implying a lift count, but whether the census should count ways, named
     entities, or operator-recognisable lifts is a backend decision, and it is
     the denominator `reference_delta` diffs against.
+    **Decided and shipped 2026-09-11 (PR #70): unnamed lifts count, keyed by
+    way id — L3V now reports 170. Runs stay name-keyed on purpose; the field
+    is `namedRunCount` and unnamed piste fragments would inflate it into
+    noise.**
 
 ## Notes on things that are deliberately *not* in the contract
 
