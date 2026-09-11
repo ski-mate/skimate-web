@@ -1,10 +1,14 @@
 # GAPS — what alpline-backend still owes the Ingestion Console
 
 The console is built entirely against `src/lib/ingestion-api.ts` and ships
-running on a mock adapter. **None of the 23 endpoints below exist yet.** This
-file lists them in the order they unblock work, so the backend can be built
-incrementally and the console flipped to `INGESTION_API_MODE=real` one screen at
-a time rather than all at once.
+running on a mock adapter. This file lists endpoints in the order they unblock
+work, so the backend can be built incrementally and the console flipped to
+`INGESTION_API_MODE=real` one screen at a time rather than all at once.
+
+> **Status 2026-09-11:** Phases 1–6 (all 23 endpoints) are **built** on
+> alpline-backend `feat/registry-stage0` (PR #68) and the console runs against
+> them for real (`INGESTION_API_MODE=real`, verified end to end in the
+> browser). Phase 7 below is the next unbuilt stage — specced, not started.
 
 The contract file is normative: the zod schemas are the payload definition, and
 the console's HTTP adapter validates every response against them, so a shape
@@ -112,6 +116,54 @@ open questions.
 | 22 | `POST /ingestion/registry/:registryId/runs` | Queue a run over named stages. Also used from the worklist. |
 | 23 | `GET /ingestion/runs/:runId` | One run in full. |
 
+### Phase 7 — Routing coverage (new screen 8) — specced 2026-09-11, not started
+
+Everything before this phase gets the *POI* layer to measured quality; the
+routing graph still only *asserts* coverage. The extraction is OSM-sourced —
+which for the Alps is excellent, and is the same substrate Slopes/FATMAP/
+OpenSkiMap render — but "excellent in general" is not a per-resort guarantee,
+and the pipeline already computes the diagnostics that would prove it
+(`ski_routing.connectivity_report`, `ski_routing.unconnected_lift_terminals`)
+without anyone ever reviewing them. Phase 7 turns those invisible diagnostics
+plus a reference-count comparison into a reviewed, gated, audited stage: the
+same pattern as phases 2–5. **Not a separate console** — a stage screen in
+this one.
+
+Stage key: `routing`, added to `StageKey` between `membership` and
+`enrichment`. Routing and enrichment are order-independent (graph vs POIs);
+both must be green before `publish`. Contract-first like every other phase:
+extend `ingestion-api.ts` (schemas + `StageKey` + new `GateKey` values), teach
+the mock adapter fixtures, then build the backend against the frozen shape.
+
+| # | Route | Notes |
+|---|---|---|
+| 24 | `GET /ingestion/runs/:runId/coverage` | The coverage report, computed live from the `ski_routing` schema (never snapshotted — same rule as every review queue). Three sections: **graph** (nodes/edges/components per member territory, connector-edge count, % of piste km reachable from a lift); **extraction census** (runs by difficulty and lifts by type extracted per member, each with `osmRef`); **reference comparison** (the same counts from independent sources — see the sources table below — with per-source deltas). Plus the diagnostics queues: unconnected lift terminals, isolated piste components, ways missing `piste:type`/difficulty, each capped and nearest-first like the orphan queue. |
+| 25 | `POST /ingestion/runs/:runId/coverage/verdicts` | Batched, idempotent per finding id, one audit row each — the harvest-verdict pattern. Verdicts: `fix_upstream` (the gap is real and belongs in OSM; records the finding and re-checks automatically on the next harvest — the console never edits OSM), `local_override` (store a connector edge or tag override as our own evidence layer over OSM, provenance `source: 'override'`), `accept_gap` (reason mandatory — e.g. a decommissioned lift OSM still carries), `retry` (re-extract after an upstream fix landed). |
+| — | `POST /ingestion/runs/:runId/gates/:gateKey/waive` | **Reused from phase 3** (#10) — the endpoint is already generic over `gateKey`; the new keys below just extend the enum. |
+
+New gates, enforced server-side like the phase 3 four:
+
+| Gate | Blocking when |
+|---|---|
+| `disconnected_terminal` | A lift terminal is not connected into the routable graph (the exact failure the v2 connector work exists to prevent — a regression detector). |
+| `isolated_component` | A piste component above a size floor is unreachable from any lift. |
+| `reference_delta` | Extracted run/lift counts differ from a reference source beyond tolerance (see open question 8). |
+| `missing_difficulty` | Warn-only: ways with `piste:type` but no difficulty; routing degrades rather than breaks. |
+
+Reference sources, in trust order:
+
+| Source | What it checks | Already have it? |
+|---|---|---|
+| alpline-lifts / liftie feed | Lift *names* per resort, scraped from the operator's own status page — operator-authoritative. Diff against OSM lift names via `lift_name_aliases` + fuzzy match; a liftie lift with no OSM counterpart is the single strongest "we missed one" signal. | Yes — live in prod, 201 resorts. |
+| Skimap entry | Declared run/lift totals and the piste-map sheet. | Yes — local index, 5,415 areas. |
+| Official resort figures | "X km of pistes, Y lifts" as published by the resort. | No — manifest gains optional `declaredCounts`; entered once at onboarding (wizard step) or backfilled from the QA screen. |
+| Piste-map asset | Human eyeball, side by side with the extracted map. | Yes — `resort_piste_maps` + the QA screen's viewer. |
+
+QA tie-in: the phase 5 check list grows a sixth automated check,
+`coverage_signed_off` (blocking) — true when the entry's latest routing-stage
+run has all four gates pass/waived and an empty unresolved-diagnostics queue.
+`piste_map_compared` stays as the human half of the same question.
+
 ---
 
 ## Open questions the contract could not settle
@@ -137,12 +189,31 @@ returns, but the shape assumes an answer exists.
    category id. Still `⟦TO FILL⟧`. Phase 4 cannot be finished without it.
 6. **Tripadvisor.** Only `location_id` may ever be stored. If any endpoint here
    starts returning Tripadvisor payloads, that is a licensing bug, not a feature.
+7. **(Phase 7) Where do official counts live?** Proposed: optional
+   `declaredCounts` on the onboarding manifest, backfillable later. But resorts
+   publish marketing numbers ("600 km of pistes") that don't decompose into
+   countable runs — the comparison may only be meaningful for lifts.
+8. **(Phase 7) `reference_delta` tolerance.** Counting runs is genuinely fuzzy
+   (one OSM way can be half a marketing "run", and vice versa), so an exact-match
+   gate would false-positive everywhere. Lift-name diffs can be near-exact;
+   run-count deltas probably need a percentage band. Start loose, tighten
+   empirically — same philosophy as the Overture confidence threshold.
+9. **(Phase 7) Isolated-component size floor.** A 200 m beginner rope-tow slope
+   with no lift connection may be legitimately isolated; a 5 km sector is a
+   pipeline bug. Where the floor sits (piste km? way count?) needs data.
+10. **(Phase 7) Override storage.** `local_override` needs a home that survives
+    re-harvest (the pipeline drops and rebuilds `ski_routing`). Proposed: an
+    `routing_overrides` table in `public` (golden baseline), applied as a final
+    pipeline step — mirrors how verdicts persist in `places.attrs` across runs.
 
 ## Notes on things that are deliberately *not* in the contract
 
 - **No geometry editing endpoints.** The analyst reassigns, merges,
   re-categorises and flags for re-run. Hand-tracing is the thing Slopes does
-  that we specifically do not.
+  that we specifically do not. (Phase 7's `local_override` does not change
+  this: it stores connector edges and tag overrides — graph repairs — never
+  hand-traced piste geometry. A genuinely missing run is a `fix_upstream`,
+  fixed in OSM where everyone benefits.)
 - **No unbounded list endpoints.** Every list is paginated or bbox-scoped,
   mirroring the backend's own geospatial rules.
 - **No Stage 4.** Guides authoring is out of scope for v1; the console has a nav
